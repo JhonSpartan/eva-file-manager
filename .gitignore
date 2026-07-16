@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual env
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+
+# Logs
+*.log
+.eva_logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Qt
+*.ui.autosave
