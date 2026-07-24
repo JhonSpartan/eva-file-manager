@@ -1,4 +1,11 @@
 from dataclasses import dataclass, field
+from pathlib import Path
+
+@dataclass
+class RenameFileResult:
+    old_path: Path
+    new_path: Path
+    renamed: bool
 
 @dataclass
 class RenameResult:
@@ -11,3 +18,4 @@ class ReplaceResult:
     renamed: int = 0
     skipped: list[str] = field(default_factory=list)
     failed: list[str] = field(default_factory=list)
+

@@ -3,12 +3,13 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QGridLayout, QGroupBox, QLineEdit,
     QStackedWidget, QMessageBox, QFileDialog, QListWidgetItem
 )
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QIcon
 from PySide6.QtCore import Qt, QTimer, QThread
 
 import pathlib
 from pathlib import Path
 
+from models.results import RenameFileResult
 from ui.pages.copy_rename_page import CopyRenamePage
 from ui.pages.eva_page import EvaPage
 from ui.pages.edit_files_page import EditFilesPage
@@ -57,6 +58,7 @@ class Ui_MainWindow:
 
         self.setup_styles()
 
+
     def setup_styles(self):
         font = QFont()
         font.setPointSize(10)
@@ -69,6 +71,7 @@ class MainWindow(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setup_ui(self)
         self.setup_connections()
+        self.load_icons()
         self.eva_counter = 0
         # === Progress bar default value ===
         self.index = 0
@@ -128,10 +131,17 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", str(e))
             return
 
+        self.edit_page.files_to_rename_list.clear()
+        self.edit_page.renamed_files_list.clear()
+        self.edit_page.editFilesPbar.setValue(0)
         # рендерим
         self.render_files(file_paths)
 
+    def load_icons(self):
+        self.check_icon = QIcon("resources/icons/check.svg")
+
     def render_files(self, file_paths: list[Path]):
+
         for file_path in file_paths:
             file_name = file_path.name
 
@@ -162,8 +172,13 @@ class MainWindow(QMainWindow):
     #     except ValueError as e:
     #         QMessageBox.warning(self, "Error", str(e))
     #         return
+    def set_processing_state(self, processing: bool):
+        self.edit_page.load_files_btn.setEnabled(not processing)
+        self.edit_page.rename_files_btn.setEnabled(not processing)
+        self.edit_page.replace_btn.setEnabled(not processing)
 
     def start_rename(self):
+        self.set_processing_state(True)
         self.thread = QThread()
         self.worker = RenameWorker(self.files_to_rename, self.file_service)
 
@@ -179,19 +194,36 @@ class MainWindow(QMainWindow):
 
         self.thread.start()
 
-    def on_rename_progress(self, current, total):
+    def move_renamed_file(self, file_result: RenameFileResult):
+        left_list = self.edit_page.files_to_rename_list
+        for row in range(left_list.count()):
+            item = left_list.item(row)
+            if item.data(Qt.UserRole) == file_result.old_path:
+                moved_item = left_list.takeItem(row)
+                moved_item.setText(file_result.new_path.name)
+                moved_item.setData(Qt.UserRole, file_result.new_path)
+                moved_item.setIcon(self.check_icon)
+                self.edit_page.renamed_files_list.addItem(moved_item)
+                self.edit_page.renamed_files_list.scrollToBottom()
+                break
+
+    def on_rename_progress(self, current, total, file_result):
         self.edit_page.editFilesPbar.setMaximum(total)
         self.edit_page.editFilesPbar.setValue(current)
 
+        self.move_renamed_file(file_result)
+
     def on_rename_finished(self, result):
         summary = []
-        if renamed_files:
+
+        if result.renamed_files:
             summary.append(f"{result.renamed_files} filenames renamed.")
-        if renamed_layers:
+        if result.renamed_layers:
             summary.append(f'{result.renamed_layers} "nadpis" layers updated.')
 
         QMessageBox.information(self, "Done", "\n".join(summary) or "No changes made.")
         self.files_to_rename.clear()
+        self.set_processing_state(False)
 
 
     def start_replace(self, find_text: str, replace_text: str):

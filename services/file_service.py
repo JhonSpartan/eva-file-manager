@@ -5,9 +5,9 @@ from dataclasses import dataclass, field
 
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from models.results import RenameResult
-    from models.results import ReplaceResult
+# if TYPE_CHECKING:
+from models.results import RenameResult, RenameFileResult
+from models.results import ReplaceResult
 
 class FileService:
 
@@ -101,17 +101,30 @@ class FileService:
     #         renamed_files=renamed_layers,
     #         renamed_layers=renamed_layers
     #     )
+    def _file_result(
+            self,
+            old_path: Path,
+            new_path: Path,
+            renamed: bool,
+    ) -> RenameFileResult:
+        return RenameFileResult(
+            old_path=old_path,
+            new_path=new_path,
+            renamed=renamed,
+        )
 
-    def rename_one_file(self, file: Path, result: "RenameResult") -> None:
+    def rename_one_file(self, file: Path, result: "RenameResult") -> RenameFileResult:
         renamed = False
+        need_rename = False
+        new_file = file
 
         if not file.is_file():
-            return result
+            return self._file_result(file, new_file, False)
 
         # ожидаем структуру: EVA / ART / ID / file.dxf
         if len(file.parents) < 3:
             result.errors.append(f"Unexpected folder depth: {file}")
-            return result
+            return self._file_result(file, new_file, False)
 
         file_id = file.parent.name
         file_art = pathlib.PurePath(file.parent.parent).name
@@ -122,7 +135,7 @@ class FileService:
 
         if ext != ".dxf":
             result.errors.append(f"Not a .dxf file detected: {file}")
-            return result
+            return self._file_result(file, new_file, False)
 
         if any(ch in name for ch in "óąśłźż"):
             result.errors.append(f"Polish letter in {file}")
@@ -132,17 +145,17 @@ class FileService:
         if len(split_name) <= 2 or split_name[2] != file_id:
             split_name[2:3] = [file_id]
             result.errors.append(f"Wrong id in {file}")
-            renamed = True
+            need_rename = True
 
         if len(split_name) <= 1 or split_name[1] != file_art:
             split_name[1:2] = [file_art]
             result.errors.append(f"Wrong art in {file}")
-            renamed = True
+            need_rename = True
 
         if len(split_name) > 0 and split_name[0] != file_eva:
             split_name[0] = file_eva
             result.errors.append(f"Wrong EVA in {file}")
-            renamed = True
+            need_rename = True
 
         rename_inner_res = self.rename_inner(file, file_art, name, file_id)
 
@@ -152,14 +165,18 @@ class FileService:
         new_name = "_".join(split_name) + ext
         new_file = file.with_name(new_name)
 
-        if renamed:
+        if need_rename:
             try:
                 file.rename(new_file)
+
+                renamed = True
                 result.renamed_files += 1
             except FileExistsError:
                 result.errors.append(f"Rename target exists: {new_file}")
             except Exception as e:
                 result.errors.append(f"Rename error for {file}: {e}")
+
+        return self._file_result(file, new_file, renamed)
 
     def rename_inner(self, new_file_path: Path, file_art: str, filename: str, file_id: str) -> int:
         layer_changes = 0

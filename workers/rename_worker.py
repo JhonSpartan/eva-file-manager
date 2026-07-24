@@ -1,10 +1,10 @@
 from PySide6.QtCore import QObject, Signal, Slot
-from models.results import RenameResult
+from models.results import RenameResult, RenameFileResult
 from pathlib import Path
 from services.file_service import FileService
 
 class RenameWorker(QObject):
-    progress = Signal(int, int)      # current, total
+    progress = Signal(int, int, RenameFileResult)      # current, total
     finished = Signal(RenameResult)        # итоговый результат
 
     def __init__(self, files: list[Path], service: FileService):
@@ -20,8 +20,8 @@ class RenameWorker(QObject):
         log_path = Path(Path.home() / ".eva_logs")
 
         for index, file in enumerate(self.files, start=1):
-            self.service.rename_one_file(file, result)
-            self.progress.emit(index, total)
+            file_result = self.service.rename_one_file(file, result)
+            self.progress.emit(index, total, file_result)
 
         self.finished.emit(result)
 
