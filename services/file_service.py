@@ -22,85 +22,6 @@ class FileService:
 
         return dxf_files
 
-
-    # def rename_files(self, files_to_rename: list[Path]):
-    #     log_path = Path(Path.home() / ".eva_logs")
-    #     renamed_files = 0
-    #     renamed_layers = 0
-    #     odd_entries = []
-    #     error_log_entries = []
-    #
-    #     for file in files_to_rename:
-    #         renamed = False
-    #         if not file.is_file():
-    #             continue
-    #
-    #         # ожидаем структуру: EVA / ART / ID / file.dxf
-    #         if len(file.parents) < 3:
-    #             odd_entries.append(f"Unexpected folder depth: {file}")
-    #             continue
-    #
-    #         file_id = file.parent.name
-    #         file_art = pathlib.PurePath(file.parent.parent).name
-    #         file_eva = pathlib.PurePath(file.parent.parent.parent).name
-    #
-    #         name = file.stem
-    #         ext = file.suffix.lower()
-    #
-    #         if ext != ".dxf":
-    #             odd_entries.append(f"Not a .dxf file detected: {file}")
-    #             continue
-    #
-    #         if any(ch in name for ch in "óąśłźż"):
-    #             odd_entries.append(f"Polish letter in {file}")
-    #
-    #         split_name = name.split("_")
-    #
-    #         if len(split_name) <= 2 or split_name[2] != file_id:
-    #             split_name[2:3] = [file_id]
-    #             error_log_entries.append(f"Wrong id in {file}")
-    #             renamed = True
-    #
-    #         if len(split_name) <= 1 or split_name[1] != file_art:
-    #             split_name[1:2] = [file_art]
-    #             error_log_entries.append(f"Wrong art in {file}")
-    #             renamed = True
-    #
-    #         if len(split_name) > 0 and split_name[0] != file_eva:
-    #             split_name[0] = file_eva
-    #             error_log_entries.append(f"Wrong EVA in {file}")
-    #             renamed = True
-    #
-    #         rename_inner_res = self.rename_inner(file, file_art, name, file_id)
-    #
-    #         if rename_inner_res:
-    #             renamed_layers += rename_inner_res
-    #
-    #         new_name = "_".join(split_name) + ext
-    #         new_file = file.with_name(new_name)
-    #
-    #         if renamed:
-    #             try:
-    #                 file.rename(new_file)
-    #                 renamed_files += 1
-    #             except FileExistsError:
-    #                 error_log_entries.append(f"Rename target exists: {new_file}")
-    #             except Exception as e:
-    #                 error_log_entries.append(f"Rename error for {file}: {e}")
-    #
-    #     if error_log_entries:
-    #         self.log_errors(log_path, error_log_entries)
-    #
-    #     if odd_entries:
-    #         self.log_errors(log_path, odd_entries)
-    #
-    #     error_log_entries.clear()
-    #     odd_entries.clear()
-    #
-    #     return RenameFilesResult(
-    #         renamed_files=renamed_layers,
-    #         renamed_layers=renamed_layers
-    #     )
     def _file_result(
             self,
             old_path: Path,
@@ -303,17 +224,24 @@ class FileService:
             f.write("\n".join(logs) + "\n")
         logs.clear()
 
-    def replace_chars_in_one_file(self, file: Path, find_text: str, replace_text: str, result: "ReplaceResult") -> None:
+    def replace_chars_in_one_file(self, file: Path, find_text: str, replace_text: str, result: "ReplaceResult") -> RenameFileResult:
+        renamed = False
+        new_file = file
+
         if not file.is_file():
-            return result
+            return self._file_result(file, new_file, False)
 
         if find_text in file.name:
             new_file = file.with_name(file.name.replace(find_text, replace_text))
 
             try:
                 file.rename(new_file)
+
+                renamed = True
                 result.renamed += 1
             except FileExistsError:
                 result.skipped.append(f"Rename target exists: {new_file}")
             except Exception as e:
                 result.failed.append(f"{new_file} (Error: {e})")
+
+        return self._file_result(file, new_file, renamed)

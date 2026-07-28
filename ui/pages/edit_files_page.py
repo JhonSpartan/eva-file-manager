@@ -10,6 +10,7 @@ class EditFilesPage(QWidget):
     loadFilesRequested = Signal(str)
     renameFilesRequested = Signal()
     replaceCharRequested = Signal(str, str)
+    filterRequested = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -22,6 +23,7 @@ class EditFilesPage(QWidget):
         self.load_files_btn.clicked.connect(self.on_load_files_clicked)
         self.rename_files_btn.clicked.connect(self.on_rename_files_clicked)
         self.replace_btn.clicked.connect(self.on_replace_char_clicked)
+        self.find_input.textEdited.connect(self.on_char_input)
 
     def setup_ui(self):
         main_layout = QGridLayout(self)
@@ -135,3 +137,7 @@ class EditFilesPage(QWidget):
         find_text = self.find_input.text()
         replace_text = self.replace_input.text()
         self.replaceCharRequested.emit(find_text, replace_text)
+
+    def on_char_input(self):
+        find_text = self.find_input.text()
+        self.filterRequested.emit(find_text)

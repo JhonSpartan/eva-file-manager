@@ -98,6 +98,9 @@ class MainWindow(QMainWindow):
         self.edit_page.replaceCharRequested.connect(
             self.start_replace
         )
+        self.edit_page.filterRequested.connect(
+            self.filter_files
+        )
 
     def setup_connections(self):
         # === Меню слева ===
@@ -156,22 +159,6 @@ class MainWindow(QMainWindow):
             item.setData(Qt.UserRole, file_path)  # ПОЛНЫЙ ПУТЬ
             self.edit_page.files_to_rename_list.addItem(item)
 
-    # def show_renamed_files(self):
-    #     try:
-    #         result = self.file_service.rename_files(self.files_to_rename)
-    #
-    #         self.files_to_rename.clear()
-    #
-    #         summary_parts = []
-    #         if result.renamed_files:
-    #             summary_parts.append(f"{result.renamed_files} filenames renamed.")
-    #         if result.renamed_layers:
-    #             summary_parts.append(f'{result.renamed_layers} "nadpis" layers updated.')
-    #         summary = "\n\n".join(summary_parts) if summary_parts else "No changes made."
-    #         QMessageBox.information(self, "Success", summary)
-    #     except ValueError as e:
-    #         QMessageBox.warning(self, "Error", str(e))
-    #         return
     def set_processing_state(self, processing: bool):
         self.edit_page.load_files_btn.setEnabled(not processing)
         self.edit_page.rename_files_btn.setEnabled(not processing)
@@ -225,10 +212,26 @@ class MainWindow(QMainWindow):
         self.files_to_rename.clear()
         self.set_processing_state(False)
 
+    def filter_files(self, find_text: str):
+        left_list = self.edit_page.files_to_rename_list
+        for row in range(left_list.count()):
+            item = left_list.item(row)
+            if find_text not in item.text():
+                left_list.setRowHidden(row, True)
+            else:
+                left_list.setRowHidden(row, False)
+
 
     def start_replace(self, find_text: str, replace_text: str):
+        files_for_replace = []
+        left_list = self.edit_page.files_to_rename_list
+        for row in range(left_list.count()):
+            if not left_list.isRowHidden(row):
+                files_for_replace.append(left_list.item(row).data(Qt.UserRole))
+
+        self.set_processing_state(True)
         self.thread = QThread()
-        self.worker = ReplaceWorker(self.files_to_rename, find_text, replace_text, self.file_service)
+        self.worker = ReplaceWorker(files_for_replace, find_text, replace_text, self.file_service)
 
         self.worker.moveToThread(self.thread)
 
@@ -242,12 +245,15 @@ class MainWindow(QMainWindow):
 
         self.thread.start()
 
-    def on_replace_progress(self, current, total):
+    def on_replace_progress(self, current, total, file_result):
         self.edit_page.editFilesPbar.setMaximum(total)
         self.edit_page.editFilesPbar.setValue(current)
 
+        self.move_renamed_file(file_result)
+
     def on_replace_finished(self, result):
         summary = []
+
         if result.renamed:
             summary.append(f"{result.renamed} files renamed.")
         if result.skipped:
@@ -257,7 +263,7 @@ class MainWindow(QMainWindow):
         summary = "\n\n".join(summary) if summary else "No changes made."
         QMessageBox.information(self, "Success", summary)
 
-        self.files_to_rename.clear()
+        self.set_processing_state(False)
 
 
 
