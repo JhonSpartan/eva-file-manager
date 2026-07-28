@@ -11,6 +11,7 @@ class EditFilesPage(QWidget):
     renameFilesRequested = Signal()
     replaceCharRequested = Signal(str, str)
     filterRequested = Signal(str)
+    removeFilesRequested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -22,6 +23,7 @@ class EditFilesPage(QWidget):
     def setup_connections(self):
         self.load_files_btn.clicked.connect(self.on_load_files_clicked)
         self.rename_files_btn.clicked.connect(self.on_rename_files_clicked)
+        self.remove_files_btn.clicked.connect(self.on_remove_files_clicked)
         self.replace_btn.clicked.connect(self.on_replace_char_clicked)
         self.find_input.textEdited.connect(self.on_char_input)
 
@@ -132,6 +134,9 @@ class EditFilesPage(QWidget):
 
     def on_rename_files_clicked(self):
         self.renameFilesRequested.emit()
+
+    def on_remove_files_clicked(self):
+        self.removeFilesRequested.emit()
 
     def on_replace_char_clicked(self):
         find_text = self.find_input.text()

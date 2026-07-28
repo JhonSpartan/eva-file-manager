@@ -226,14 +226,13 @@ class FileService:
 
     def replace_chars_in_one_file(self, file: Path, find_text: str, replace_text: str, result: "ReplaceResult") -> RenameFileResult:
         renamed = False
-        new_file = file
+        new_name = file.stem.replace(find_text, replace_text) + file.suffix
+        new_file = file.with_name(new_name)
 
         if not file.is_file():
             return self._file_result(file, new_file, False)
 
-        if find_text in file.name:
-            new_file = file.with_name(file.name.replace(find_text, replace_text))
-
+        if find_text in file.stem:
             try:
                 file.rename(new_file)
 

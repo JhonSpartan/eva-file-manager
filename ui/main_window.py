@@ -87,6 +87,8 @@ class MainWindow(QMainWindow):
 
         self.files_to_rename: list[Path] = []
 
+        self.files_for_replace = []
+
         self.file_service = FileService()
 
         self.edit_page.loadFilesRequested.connect(
@@ -100,6 +102,9 @@ class MainWindow(QMainWindow):
         )
         self.edit_page.filterRequested.connect(
             self.filter_files
+        )
+        self.edit_page.removeFilesRequested.connect(
+            self.remove_files
         )
 
     def setup_connections(self):
@@ -163,6 +168,7 @@ class MainWindow(QMainWindow):
         self.edit_page.load_files_btn.setEnabled(not processing)
         self.edit_page.rename_files_btn.setEnabled(not processing)
         self.edit_page.replace_btn.setEnabled(not processing)
+        self.edit_page.remove_files_btn.setEnabled(not processing)
 
     def start_rename(self):
         self.set_processing_state(True)
@@ -223,15 +229,15 @@ class MainWindow(QMainWindow):
 
 
     def start_replace(self, find_text: str, replace_text: str):
-        files_for_replace = []
+        self.files_for_replace.clear()
         left_list = self.edit_page.files_to_rename_list
         for row in range(left_list.count()):
             if not left_list.isRowHidden(row):
-                files_for_replace.append(left_list.item(row).data(Qt.UserRole))
+                self.files_for_replace.append(left_list.item(row).data(Qt.UserRole))
 
         self.set_processing_state(True)
         self.thread = QThread()
-        self.worker = ReplaceWorker(files_for_replace, find_text, replace_text, self.file_service)
+        self.worker = ReplaceWorker(self.files_for_replace, find_text, replace_text, self.file_service)
 
         self.worker.moveToThread(self.thread)
 
@@ -264,6 +270,17 @@ class MainWindow(QMainWindow):
         QMessageBox.information(self, "Success", summary)
 
         self.set_processing_state(False)
+
+    def remove_files(self):
+        self.edit_page.files_to_rename_list.clear()
+        self.edit_page.renamed_files_list.clear()
+        self.files_to_rename.clear()
+        self.files_for_replace.clear()
+        self.edit_page.editFilesPbar.setValue(0)
+        self.edit_page.find_input.clear()
+        self.edit_page.replace_input.clear()
+
+
 
 
 
