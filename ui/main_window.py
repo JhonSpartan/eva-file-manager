@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QPushButton, QLabel,
     QVBoxLayout, QHBoxLayout, QGridLayout, QGroupBox, QLineEdit,
-    QStackedWidget, QMessageBox, QFileDialog, QListWidgetItem
+    QStackedWidget, QMessageBox, QFileDialog, QListWidgetItem, QTreeWidgetItem
 )
 from PySide6.QtGui import QFont, QIcon
 from PySide6.QtCore import Qt, QTimer, QThread
@@ -10,11 +10,12 @@ import pathlib
 from pathlib import Path
 
 from models.results import RenameFileResult
-from ui.pages.copy_rename_page import CopyRenamePage
+from ui.pages.copy_rename_page import CopyArtsPage
 from ui.pages.eva_page import EvaPage
 from ui.pages.edit_files_page import EditFilesPage
 
 from services.file_service import FileService
+from services.art_service import ArtService
 from workers.rename_worker import RenameWorker
 from workers.replace_worker import ReplaceWorker
 
@@ -76,7 +77,7 @@ class MainWindow(QMainWindow):
         # === Progress bar default value ===
         self.index = 0
 
-        self.copy_page = CopyRenamePage()
+        self.copy_page = CopyArtsPage()
         self.ui.stacked_widget.addWidget(self.copy_page)
 
         self.edit_page = EditFilesPage()
@@ -87,9 +88,14 @@ class MainWindow(QMainWindow):
 
         self.files_to_rename: list[Path] = []
 
-        self.files_for_replace = []
+        self.files_for_replace: list[Path] = []
+
+        self.arts_list: list[Path] = []
 
         self.file_service = FileService()
+
+        self.art_service = ArtService()
+
 
         self.edit_page.loadFilesRequested.connect(
             self.on_load_files_requested
@@ -107,11 +113,18 @@ class MainWindow(QMainWindow):
             self.remove_files
         )
 
+        self.copy_page.loadArtsRequested.connect(
+            self.on_load_arts_requested
+        )
+
     def setup_connections(self):
         # === Меню слева ===
         self.ui.btn_eva.clicked.connect(lambda: self.ui.stacked_widget.setCurrentWidget(self.eva_page))
         self.ui.btn_other1.clicked.connect(lambda: self.ui.stacked_widget.setCurrentWidget(self.copy_page))
         self.ui.btn_other2.clicked.connect(lambda: self.ui.stacked_widget.setCurrentWidget(self.edit_page))
+
+    def load_icons(self):
+        self.check_icon = QIcon("resources/icons/check.svg")
 
     def on_load_files_requested(self, current_path: str | None):
         start_dir = current_path if current_path else str(Path.home())
@@ -145,9 +158,6 @@ class MainWindow(QMainWindow):
         # рендерим
         self.render_files(file_paths)
 
-    def load_icons(self):
-        self.check_icon = QIcon("resources/icons/check.svg")
-
     def render_files(self, file_paths: list[Path]):
 
         for file_path in file_paths:
@@ -163,6 +173,55 @@ class MainWindow(QMainWindow):
             item = QListWidgetItem(file_name)
             item.setData(Qt.UserRole, file_path)  # ПОЛНЫЙ ПУТЬ
             self.edit_page.files_to_rename_list.addItem(item)
+
+    def on_load_arts_requested(self, current_path: str | None):
+        start_dir = current_path if current_path else str(Path.home())
+
+        directory = QFileDialog.getExistingDirectory(
+            self,
+            "Select source directory",
+            start_dir
+        )
+
+        if not directory:
+            return
+
+        # сохраняем состояние
+        self.copy_page.current_directory = directory
+
+        # обновляем UI
+        self.copy_page.source_dir_input.setText(directory)
+
+        # вызываем сервис
+        try:
+            art_paths = self.art_service.load_arts(directory)
+            self.arts_list = art_paths
+        except ValueError as e:
+            QMessageBox.warning(self, "Error", str(e))
+            return
+
+        self.copy_page.artsTree.clear()
+        self.copy_page.srcArtsList.clear()
+        self.copy_page.dstArtsList.clear()
+        self.copy_page.copyAndRenamePbar.setValue(0)
+        # рендерим
+        self.render_arts(art_paths)
+
+    def render_arts(self, art_paths: list[Path]):
+
+        for art_path in art_paths:
+            art_name = art_path .name
+
+            # Проверка на дубликат по имени
+            # items = self.edit_page.files_to_rename_list.findItems(
+            #     file_name, Qt.MatchExactly
+            # )
+            # if items:
+            #     continue
+
+            root_item = QTreeWidgetItem([art_name])
+            root_item.setData(0, Qt.UserRole, art_path)  # ПОЛНЫЙ ПУТЬ
+            self.copy_page.artsTree.addTopLevelItem(root_item)
 
     def set_processing_state(self, processing: bool):
         self.edit_page.load_files_btn.setEnabled(not processing)
@@ -222,7 +281,8 @@ class MainWindow(QMainWindow):
         left_list = self.edit_page.files_to_rename_list
         for row in range(left_list.count()):
             item = left_list.item(row)
-            if find_text not in item.text():
+            path = item.data(Qt.UserRole)
+            if find_text not in path.stem:
                 left_list.setRowHidden(row, True)
             else:
                 left_list.setRowHidden(row, False)

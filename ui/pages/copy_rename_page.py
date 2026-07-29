@@ -1,48 +1,50 @@
-from PySide6 import QtWidgets, QtCore, QtGui
+from PySide6.QtWidgets import (
+    QWidget, QLabel, QPushButton, QLineEdit, QListWidget,
+    QProgressBar, QVBoxLayout, QHBoxLayout, QGridLayout, QGroupBox, QTreeWidget
+)
+from PySide6.QtCore import Qt, Signal
 
 
-class CopyRenamePage(QtWidgets.QWidget):
+class CopyArtsPage(QWidget):
+
+    loadArtsRequested = Signal(str)
+
     def __init__(self, parent=None):
         super().__init__(parent)
+
+        self.current_directory: str | None = None
         self.setup_ui()
+        self.setup_connections()
+
+    def setup_connections(self):
+        self.load_arts_btn.clicked.connect(self.on_load_arts_clicked)
 
     def setup_ui(self):
-        main_layout = QtWidgets.QGridLayout(self)
+        main_layout = QGridLayout(self)
 
         # === Source directory (row 0, full width) ===
-        src_frame = QtWidgets.QFrame(self)
-        src_frame.setFrameShape(QtWidgets.QFrame.Box)
-        src_frame.setFrameShadow(QtWidgets.QFrame.Sunken)
+        source_group = QGroupBox("Source directory")
+        source_layout = QHBoxLayout(source_group)
 
-        src_layout = QtWidgets.QVBoxLayout(src_frame)
+        self.source_dir_input = QLineEdit()
+        self.load_arts_btn = QPushButton("Load files")
 
-        label = QtWidgets.QLabel("Source directory")
-        label.setFont(QtGui.QFont("", 10))
-        src_layout.addWidget(label)
+        source_layout.addWidget(self.source_dir_input)
+        source_layout.addWidget(self.load_arts_btn)
 
-        src_path_layout = QtWidgets.QHBoxLayout()
-        self.dirEdit_p2 = QtWidgets.QLineEdit()
-        self.dirEdit_p2.setFont(QtGui.QFont("", 12))
-        self.loadFilesButton_p2 = QtWidgets.QPushButton("Load files")
-        self.loadFilesButton_p2.setFont(QtGui.QFont("", 10))
-
-        src_path_layout.addWidget(self.dirEdit_p2)
-        src_path_layout.addWidget(self.loadFilesButton_p2)
-        src_layout.addLayout(src_path_layout)
-
-        main_layout.addWidget(src_frame, 0, 0, 1, 2)
+        main_layout.addWidget(source_group, 0, 0, 1, 2)
 
         # ==================================================
         # === Row 1: TWO COLUMNS ============================
         # ==================================================
 
         # ---------- LEFT COLUMN ----------
-        left_column = QtWidgets.QVBoxLayout()
+        left_column = QVBoxLayout()
 
-        all_articles_group = QtWidgets.QGroupBox("Choose article numbers")
-        all_articles_layout = QtWidgets.QVBoxLayout(all_articles_group)
+        all_articles_group = QGroupBox("Choose article numbers")
+        all_articles_layout = QVBoxLayout(all_articles_group)
 
-        self.artsTree = QtWidgets.QTreeWidget()
+        self.artsTree = QTreeWidget()
         self.artsTree.setHeaderHidden(True)
 
         all_articles_layout.addWidget(self.artsTree)
@@ -51,18 +53,18 @@ class CopyRenamePage(QtWidgets.QWidget):
         main_layout.addLayout(left_column, 1, 0)
 
         # ---------- RIGHT COLUMN (FROM + TO) ----------
-        right_column = QtWidgets.QVBoxLayout()
+        right_column = QVBoxLayout()
 
         # --- FROM ---
-        from_group = QtWidgets.QGroupBox("Article numbers to copy from")
-        from_layout = QtWidgets.QVBoxLayout(from_group)
-        self.srcArtsList = QtWidgets.QListWidget()
+        from_group = QGroupBox("Article numbers to copy from")
+        from_layout = QVBoxLayout(from_group)
+        self.srcArtsList = QListWidget()
         from_layout.addWidget(self.srcArtsList)
 
         # --- TO ---
-        to_group = QtWidgets.QGroupBox("Article numbers to copy to")
-        to_layout = QtWidgets.QVBoxLayout(to_group)
-        self.dstArtsList = QtWidgets.QListWidget()
+        to_group = QGroupBox("Article numbers to copy to")
+        to_layout = QVBoxLayout(to_group)
+        self.dstArtsList = QListWidget()
         to_layout.addWidget(self.dstArtsList)
 
         right_column.addWidget(from_group)
@@ -73,15 +75,15 @@ class CopyRenamePage(QtWidgets.QWidget):
         # ==================================================
         # === Progress bar (row 2, full width) ============
         # ==================================================
-        self.copyAndRenamePbar = QtWidgets.QProgressBar()
+        self.copyAndRenamePbar = QProgressBar()
         self.copyAndRenamePbar.setValue(0)
         main_layout.addWidget(self.copyAndRenamePbar, 2, 0, 1, 2)
 
         # ==================================================
         # === Buttons (row 3) ==============================
         # ==================================================
-        self.removeArtNumbers = QtWidgets.QPushButton("Remove article numbers")
-        self.copyAndRenameButton = QtWidgets.QPushButton("Copy and rename")
+        self.removeArtNumbers = QPushButton("Remove article numbers")
+        self.copyAndRenameButton = QPushButton("Copy and rename")
 
         main_layout.addWidget(self.removeArtNumbers, 3, 0)
         main_layout.addWidget(self.copyAndRenameButton, 3, 1)
@@ -97,8 +99,7 @@ class CopyRenamePage(QtWidgets.QWidget):
         # === Widgets registry =============================
         # ==================================================
         self.widgets = {
-            "dirEdit": self.dirEdit_p2,
-            "loadFiles": self.loadFilesButton_p2,
+            "source_dir": self.source_dir_input,
             "artsTree": self.artsTree,
             "srcArts": self.srcArtsList,
             "dstArts": self.dstArtsList,
@@ -106,3 +107,6 @@ class CopyRenamePage(QtWidgets.QWidget):
             "copy": self.copyAndRenameButton,
             "progress": self.copyAndRenamePbar,
         }
+
+    def on_load_arts_clicked(self):
+        self.loadArtsRequested.emit(self.current_directory)

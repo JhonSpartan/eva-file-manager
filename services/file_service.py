@@ -226,21 +226,24 @@ class FileService:
 
     def replace_chars_in_one_file(self, file: Path, find_text: str, replace_text: str, result: "ReplaceResult") -> RenameFileResult:
         renamed = False
+
+        if not file.is_file():
+            return self._file_result(file, file, False)
+
+        if find_text not in file.stem:
+            return self._file_result(file, file, False)
+
         new_name = file.stem.replace(find_text, replace_text) + file.suffix
         new_file = file.with_name(new_name)
 
-        if not file.is_file():
-            return self._file_result(file, new_file, False)
+        try:
+            file.rename(new_file)
 
-        if find_text in file.stem:
-            try:
-                file.rename(new_file)
-
-                renamed = True
-                result.renamed += 1
-            except FileExistsError:
-                result.skipped.append(f"Rename target exists: {new_file}")
-            except Exception as e:
-                result.failed.append(f"{new_file} (Error: {e})")
+            renamed = True
+            result.renamed += 1
+        except FileExistsError:
+            result.skipped.append(f"Rename target exists: {new_file}")
+        except Exception as e:
+            result.failed.append(f"{new_file} (Error: {e})")
 
         return self._file_result(file, new_file, renamed)
