@@ -10,7 +10,7 @@ import pathlib
 from pathlib import Path
 
 from models.results import RenameFileResult
-from ui.pages.copy_rename_page import CopyArtsPage
+from ui.pages.copy_art_page import CopyArtsPage
 from ui.pages.eva_page import EvaPage
 from ui.pages.edit_files_page import EditFilesPage
 
@@ -210,14 +210,14 @@ class MainWindow(QMainWindow):
     def render_arts(self, art_paths: list[Path]):
 
         for art_path in art_paths:
-            art_name = art_path .name
+            art_name = art_path.name
 
             # Проверка на дубликат по имени
-            # items = self.edit_page.files_to_rename_list.findItems(
-            #     file_name, Qt.MatchExactly
-            # )
-            # if items:
-            #     continue
+            items = self.copy_page.dstArtsList.findItems(
+                art_name, Qt.MatchExactly
+            )
+            if items:
+                continue
 
             root_item = QTreeWidgetItem([art_name])
             root_item.setData(0, Qt.UserRole, art_path)  # ПОЛНЫЙ ПУТЬ

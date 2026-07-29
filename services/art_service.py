@@ -1,25 +1,42 @@
-import pathlib
 from pathlib import Path
 
 class ArtService:
 
     def load_arts(self, directory: str) -> list[Path]:
-        path = Path(directory)
-
-        if not path.exists():
-            raise ValueError("Directory does not exist")
-
-
-        # arts = [d for d in path.rglob("*.dxf").parents[1] if d.is_dir()]
-        arts = []
         root = Path(directory)
 
-        for eva in root.iterdir():
-            if not eva.is_dir():
-                continue
+        if not root.exists():
+            raise ValueError("Directory does not exist")
 
-            for art in eva.iterdir():
-                if art.is_dir():
-                    arts.append(art)
+        children = [p for p in root.iterdir() if p.is_dir()]
+
+        if not children:
+            return []
+
+        first = children[0]
+
+        if self._contains_dxf(first):
+            return children
+
+        arts = []
+
+        for eva in children:
+            arts.extend(
+                art for art in eva.iterdir()
+                if art.is_dir()
+            )
 
         return arts
+
+    def _contains_dxf(self, folder: Path) -> bool:
+        for subdir in folder.iterdir():
+            if not subdir.is_dir():
+                continue
+
+            if any(
+                    file.is_file() and file.suffix.lower() == ".dxf"
+                    for file in subdir.iterdir()
+            ):
+                return True
+
+        return False
