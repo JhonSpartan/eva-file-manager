@@ -29,9 +29,7 @@ class ArtService:
         return arts
 
     def _contains_dxf(self, folder: Path) -> bool:
-        for subdir in folder.iterdir():
-            if not subdir.is_dir():
-                continue
+        for subdir in (p for p in folder.iterdir() if p.is_dir()):
 
             if any(
                     file.is_file() and file.suffix.lower() == ".dxf"

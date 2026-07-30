@@ -90,8 +90,6 @@ class MainWindow(QMainWindow):
 
         self.files_for_replace: list[Path] = []
 
-        self.arts_list: list[Path] = []
-
         self.file_service = FileService()
 
         self.art_service = ArtService()
@@ -163,13 +161,6 @@ class MainWindow(QMainWindow):
         for file_path in file_paths:
             file_name = file_path.name
 
-            # Проверка на дубликат по имени
-            items = self.edit_page.files_to_rename_list.findItems(
-                file_name, Qt.MatchExactly
-            )
-            if items:
-                continue
-
             item = QListWidgetItem(file_name)
             item.setData(Qt.UserRole, file_path)  # ПОЛНЫЙ ПУТЬ
             self.edit_page.files_to_rename_list.addItem(item)
@@ -195,7 +186,6 @@ class MainWindow(QMainWindow):
         # вызываем сервис
         try:
             art_paths = self.art_service.load_arts(directory)
-            self.arts_list = art_paths
         except ValueError as e:
             QMessageBox.warning(self, "Error", str(e))
             return
@@ -211,13 +201,6 @@ class MainWindow(QMainWindow):
 
         for art_path in art_paths:
             art_name = art_path.name
-
-            # Проверка на дубликат по имени
-            items = self.copy_page.dstArtsList.findItems(
-                art_name, Qt.MatchExactly
-            )
-            if items:
-                continue
 
             root_item = QTreeWidgetItem([art_name])
             root_item.setData(0, Qt.UserRole, art_path)  # ПОЛНЫЙ ПУТЬ

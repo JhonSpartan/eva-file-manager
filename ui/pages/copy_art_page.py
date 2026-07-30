@@ -58,14 +58,20 @@ class CopyArtsPage(QWidget):
         # --- FROM ---
         from_group = QGroupBox("Article numbers to copy from")
         from_layout = QVBoxLayout(from_group)
-        self.srcArtsList = QListWidget()
-        from_layout.addWidget(self.srcArtsList)
+
+        self.srcArtsTree = QTreeWidget()
+        self.srcArtsTree.setHeaderHidden(True)
+
+        from_layout.addWidget(self.srcArtsTree)
 
         # --- TO ---
         to_group = QGroupBox("Article numbers to copy to")
         to_layout = QVBoxLayout(to_group)
-        self.dstArtsList = QListWidget()
-        to_layout.addWidget(self.dstArtsList)
+
+        self.dstArtsTree = QTreeWidget()
+        self.dstArtsTree.setHeaderHidden(True)
+
+        to_layout.addWidget(self.dstArtsTree)
 
         right_column.addWidget(from_group)
         right_column.addWidget(to_group)
@@ -101,8 +107,8 @@ class CopyArtsPage(QWidget):
         self.widgets = {
             "source_dir": self.source_dir_input,
             "artsTree": self.artsTree,
-            "srcArts": self.srcArtsList,
-            "dstArts": self.dstArtsList,
+            "srcArts": self.srcArtsTree,
+            "dstArts": self.dstArtsTree,
             "removeArts": self.removeArtNumbers,
             "copy": self.copyAndRenameButton,
             "progress": self.copyAndRenamePbar,
