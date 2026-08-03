@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem
+from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem, QAbstractItemView
 from enum import Enum
 from pathlib import Path
 from PySide6.QtCore import Qt
@@ -113,7 +113,16 @@ class ArtsTree(QTreeWidget):
             self.set_children_state(child, state)
 
     def setup_drag_drop(self):
-        print("aaa")
+
+        self.setDragEnabled(True)
+        self.setDropIndicatorShown(True)
+
+        if self.mode == ArtsTreeMode.AVAILABLE:
+            self.setAcceptDrops(False)
+        else:
+            self.setAcceptDrops(True)
+
+        self.setDragDropMode(QAbstractItemView.DragDrop)
 
 
         # self.set_item_checked()
