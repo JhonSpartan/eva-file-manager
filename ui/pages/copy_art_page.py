@@ -3,6 +3,7 @@ from PySide6.QtWidgets import (
     QProgressBar, QVBoxLayout, QHBoxLayout, QGridLayout, QGroupBox, QTreeWidget
 )
 from PySide6.QtCore import Qt, Signal
+from widgets.arts_tree import ArtsTree, ArtsTreeMode
 
 
 class CopyArtsPage(QWidget):
@@ -44,8 +45,8 @@ class CopyArtsPage(QWidget):
         all_articles_group = QGroupBox("Choose article numbers")
         all_articles_layout = QVBoxLayout(all_articles_group)
 
-        self.artsTree = QTreeWidget()
-        self.artsTree.setHeaderHidden(True)
+        # self.artsTree = QTreeWidget()
+        self.artsTree = ArtsTree(ArtsTreeMode.AVAILABLE)
 
         all_articles_layout.addWidget(self.artsTree)
         left_column.addWidget(all_articles_group)

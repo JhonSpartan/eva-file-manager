@@ -190,21 +190,27 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", str(e))
             return
 
-        self.copy_page.artsTree.clear()
-        self.copy_page.srcArtsList.clear()
-        self.copy_page.dstArtsList.clear()
+        # self.copy_page.srcArtsTree.clear_tree()
+        # self.copy_page.dstArtsTree.clear_tree()
         self.copy_page.copyAndRenamePbar.setValue(0)
+
+        self.copy_page.artsTree.load_arts(art_paths)
+
+        # self.copy_page.artsTree.clear()
+
         # рендерим
-        self.render_arts(art_paths)
+        # self.render_arts(art_paths)
 
-    def render_arts(self, art_paths: list[Path]):
-
-        for art_path in art_paths:
-            art_name = art_path.name
-
-            root_item = QTreeWidgetItem([art_name])
-            root_item.setData(0, Qt.UserRole, art_path)  # ПОЛНЫЙ ПУТЬ
-            self.copy_page.artsTree.addTopLevelItem(root_item)
+    # def render_arts(self, art_paths: list[Path]):
+    #     self.copy_page.artsTree.clear_tree()
+    #
+    #     for art_path in art_paths:
+    #         self.copy_page.artsTree.add_art(art_path)
+    #         art_name = art_path.name
+    #
+    #         root_item = QTreeWidgetItem([art_name])
+    #         root_item.setData(0, Qt.UserRole, art_path)  # ПОЛНЫЙ ПУТЬ
+    #         self.copy_page.artsTree.addTopLevelItem(root_item)
 
     def set_processing_state(self, processing: bool):
         self.edit_page.load_files_btn.setEnabled(not processing)
