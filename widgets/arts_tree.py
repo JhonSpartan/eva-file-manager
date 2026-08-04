@@ -35,20 +35,27 @@ class ArtsTree(QTreeWidget):
     def clear_tree(self):
         self.clear()
 
-    def _create_item(self, text: str, path: Path) -> QTreeWidgetItem:
+    def _create_item(self, text: str, path: Path, draggable: bool) -> QTreeWidgetItem:
         item = QTreeWidgetItem([text])
         item.setData(0, Qt.UserRole, path)
 
-        if self.mode != ArtsTreeMode.DESTINATION:
-            item.setFlags(
-                item.flags() | Qt.ItemIsUserCheckable
-            )
+        flags = item.flags()
+
+        if self.mode != ArtsTreeMode.AVAILABLE:
+            flags |= Qt.ItemIsUserCheckable
             item.setCheckState(0, Qt.Checked)
+
+        if draggable:
+            flags |= Qt.ItemIsDragEnabled
+        else:
+            flags &= ~Qt.ItemIsDragEnabled
+
+        item.setFlags(flags)
 
         return item
 
     def add_art(self, art_path: Path):
-        root_item = self._create_item(art_path.name, art_path)
+        root_item = self._create_item(art_path.name, art_path, draggable=True)
 
         self.addTopLevelItem(root_item)
 
@@ -57,7 +64,7 @@ class ArtsTree(QTreeWidget):
             if not id_folder.is_dir():
                 continue
 
-            id_item = self._create_item(id_folder.name, id_folder)
+            id_item = self._create_item(id_folder.name, id_folder, draggable=False)
 
             root_item.addChild(id_item)
 
@@ -69,7 +76,7 @@ class ArtsTree(QTreeWidget):
                 if file.suffix.lower() != ".dxf":
                     continue
 
-                file_item = self._create_item(file.name, file)
+                file_item = self._create_item(file.name, file, draggable=False)
 
                 id_item.addChild(file_item)
 
