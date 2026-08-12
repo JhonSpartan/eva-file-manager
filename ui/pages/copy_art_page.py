@@ -45,7 +45,6 @@ class CopyArtsPage(QWidget):
         all_articles_group = QGroupBox("Choose article numbers")
         all_articles_layout = QVBoxLayout(all_articles_group)
 
-        # self.artsTree = QTreeWidget()
         self.artsTree = ArtsTree(ArtsTreeMode.AVAILABLE)
 
         all_articles_layout.addWidget(self.artsTree)
