@@ -10,12 +10,14 @@ import pathlib
 from pathlib import Path
 
 from models.results import RenameFileResult
+from services.art_copy_service import ArtCopyService
 from ui.pages.copy_art_page import CopyArtsPage
 from ui.pages.eva_page import EvaPage
 from ui.pages.edit_files_page import EditFilesPage
 
 from services.file_service import FileService
 from services.art_service import ArtService
+from workers.art_copy_worker import ArtCopyWorker
 from workers.rename_worker import RenameWorker
 from workers.replace_worker import ReplaceWorker
 
@@ -93,7 +95,7 @@ class MainWindow(QMainWindow):
         self.file_service = FileService()
 
         self.art_service = ArtService()
-
+        self.art_copy_service = ArtCopyService()
 
         self.edit_page.loadFilesRequested.connect(
             self.on_load_files_requested
@@ -110,9 +112,11 @@ class MainWindow(QMainWindow):
         self.edit_page.removeFilesRequested.connect(
             self.remove_files
         )
-
         self.copy_page.loadArtsRequested.connect(
             self.on_load_arts_requested
+        )
+        self.copy_page.copyAndRenameRequested.connect(
+            self.start_copy_art
         )
 
     def setup_connections(self):
@@ -328,6 +332,119 @@ class MainWindow(QMainWindow):
         self.edit_page.editFilesPbar.setValue(0)
         self.edit_page.find_input.clear()
         self.edit_page.replace_input.clear()
+
+    def start_copy_art(self):
+
+        src_tree = self.copy_page.srcArtsTree
+        dst_tree = self.copy_page.dstArtsTree
+
+        if src_tree.topLevelItemCount() != 1:
+            QMessageBox.warning(
+                self,
+                "Error",
+                "Select exactly one source ART."
+            )
+            return
+
+        if dst_tree.topLevelItemCount() == 0:
+            QMessageBox.warning(
+                self,
+                "Error",
+                "Select at least one destination ART."
+            )
+            return
+
+        source_item = src_tree.topLevelItem(0)
+        source_art = source_item.data(0, Qt.UserRole)
+
+        destination_arts = []
+
+        for index in range(dst_tree.topLevelItemCount()):
+            item = dst_tree.topLevelItem(index)
+            path = item.data(0, Qt.UserRole)
+
+            if isinstance(path, Path):
+                destination_arts.append(path)
+
+        if not isinstance(source_art, Path):
+            QMessageBox.warning(
+                self,
+                "Error",
+                "Invalid source ART."
+            )
+            return
+
+        if not destination_arts:
+            QMessageBox.warning(
+                self,
+                "Error",
+                "No destination ARTs found."
+            )
+            return
+
+        self.set_processing_state(True)
+
+        self.thread = QThread()
+        self.worker = ArtCopyWorker(
+            source_art,
+            destination_arts,
+            self.art_copy_service,
+        )
+
+        self.worker.moveToThread(self.thread)
+
+        self.thread.started.connect(self.worker.run)
+
+        self.worker.progress.connect(
+            self.on_copy_progress
+        )
+
+        self.worker.finished.connect(
+            self.on_copy_finished
+        )
+
+        self.worker.finished.connect(
+            self.thread.quit
+        )
+
+        self.worker.finished.connect(
+            self.worker.deleteLater
+        )
+
+        self.thread.finished.connect(
+            self.thread.deleteLater
+        )
+
+        self.thread.start()
+
+    def on_copy_progress(self, current, total):
+        self.copy_page.copyAndRenamePbar.setMaximum(total)
+        self.copy_page.copyAndRenamePbar.setValue(current)
+
+    def on_copy_finished(self, result):
+
+        self.set_processing_state(False)
+
+        if isinstance(result, Exception):
+            QMessageBox.critical(
+                self,
+                "Copy error",
+                str(result),
+            )
+            return
+
+        QMessageBox.information(
+            self,
+            "Done",
+            "ARTs copied successfully.",
+        )
+
+
+
+
+
+
+
 
 
 

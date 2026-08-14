@@ -9,6 +9,7 @@ from widgets.arts_tree import ArtsTree, ArtsTreeMode
 class CopyArtsPage(QWidget):
 
     loadArtsRequested = Signal(str)
+    copyAndRenameRequested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -59,8 +60,7 @@ class CopyArtsPage(QWidget):
         from_group = QGroupBox("Article numbers to copy from")
         from_layout = QVBoxLayout(from_group)
 
-        self.srcArtsTree = QTreeWidget()
-        self.srcArtsTree.setHeaderHidden(True)
+        self.srcArtsTree = ArtsTree(ArtsTreeMode.SOURCE)
 
         from_layout.addWidget(self.srcArtsTree)
 
@@ -68,8 +68,7 @@ class CopyArtsPage(QWidget):
         to_group = QGroupBox("Article numbers to copy to")
         to_layout = QVBoxLayout(to_group)
 
-        self.dstArtsTree = QTreeWidget()
-        self.dstArtsTree.setHeaderHidden(True)
+        self.dstArtsTree = ArtsTree(ArtsTreeMode.DESTINATION)
 
         to_layout.addWidget(self.dstArtsTree)
 
@@ -116,3 +115,6 @@ class CopyArtsPage(QWidget):
 
     def on_load_arts_clicked(self):
         self.loadArtsRequested.emit(self.current_directory)
+
+    def on_copy_and_rename_clicked(self):
+        self.copyAndRenameRequested.emit()

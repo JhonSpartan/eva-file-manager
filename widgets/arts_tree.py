@@ -1,7 +1,10 @@
 from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem, QAbstractItemView
 from enum import Enum
 from pathlib import Path
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QMimeData
+from PySide6.QtGui import QDrag
+
+ART_MIME_TYPE = "application/x-eva-art"
 
 class ArtsTreeMode(Enum):
     AVAILABLE = 1
@@ -54,12 +57,27 @@ class ArtsTree(QTreeWidget):
 
         return item
 
+    def _id_sort_key(self, path: Path):
+        try:
+            return (0, int(path.name))
+        except ValueError:
+            return (1, path.name)
+
     def add_art(self, art_path: Path):
         root_item = self._create_item(art_path.name, art_path, draggable=True)
 
         self.addTopLevelItem(root_item)
 
-        for id_folder in art_path.iterdir():
+        id_folders = sorted(
+            (
+                folder
+                for folder in art_path.iterdir()
+                if folder.is_dir()
+            ),
+            key=self._id_sort_key
+        )
+
+        for id_folder in id_folders:
 
             if not id_folder.is_dir():
                 continue
@@ -131,7 +149,74 @@ class ArtsTree(QTreeWidget):
 
         self.setDragDropMode(QAbstractItemView.DragDrop)
 
+    def dragEnterEvent(self, event):
+        if self.mode == ArtsTreeMode.AVAILABLE:
+            event.ignore()
+            return
 
+        if event.mimeData().hasFormat(ART_MIME_TYPE):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        if self.mode == ArtsTreeMode.AVAILABLE:
+            event.ignore()
+            return
+
+        if event.mimeData().hasFormat(ART_MIME_TYPE):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def _remove_art(self, path: Path):
+        for index in range(self.topLevelItemCount()):
+            item = self.topLevelItem(index)
+
+            if item.data(0, Qt.UserRole) == path:
+                self.takeTopLevelItem(index)
+                return
+
+    def startDrag(self, supportedActions):
+        item = self.currentItem()
+
+        if item is None:
+            return
+
+        path = item.data(0, Qt.UserRole)
+
+        if not isinstance(path, Path):
+            return
+
+        mime_data = QMimeData()
+        mime_data.setData(
+            ART_MIME_TYPE,
+            str(path).encode("utf-8")
+        )
+
+        drag = QDrag(self)
+        drag.setMimeData(mime_data)
+
+        result = drag.exec(Qt.MoveAction)
+
+        if result == Qt.MoveAction:
+            self._remove_art(path)
+
+    def dropEvent(self, event):
+        if not event.mimeData().hasFormat(ART_MIME_TYPE):
+            event.ignore()
+            return
+
+        data = event.mimeData().data(ART_MIME_TYPE)
+        path = Path(bytes(data).decode("utf-8"))
+
+        if not path.is_dir():
+            event.ignore()
+            return
+
+        self.add_art(path)
+
+        event.acceptProposedAction()
         # self.set_item_checked()
         # self.set_single_art_mode(True)
         #
