@@ -10,7 +10,9 @@ import pathlib
 from pathlib import Path
 
 from models.results import RenameFileResult
+from services.art_copy_planner import ArtCopyPlanner
 from services.art_copy_service import ArtCopyService
+from services.art_copy_validator import ArtCopyValidator
 from ui.pages.copy_art_page import CopyArtsPage
 from ui.pages.eva_page import EvaPage
 from ui.pages.edit_files_page import EditFilesPage
@@ -96,6 +98,8 @@ class MainWindow(QMainWindow):
 
         self.art_service = ArtService()
         self.art_copy_service = ArtCopyService()
+        self.art_copy_validator = ArtCopyValidator()
+        self.art_copy_planner = ArtCopyPlanner()
 
         self.edit_page.loadFilesRequested.connect(
             self.on_load_files_requested
@@ -348,73 +352,121 @@ class MainWindow(QMainWindow):
         self.edit_page.replace_input.clear()
 
     def start_copy_art(self):
+        source_selections = (
+            self.copy_page.srcArtsTree.get_art_selections()
+        )
 
-        src_tree = self.copy_page.srcArtsTree
-        dst_tree = self.copy_page.dstArtsTree
+        destination_selections = (
+            self.copy_page.dstArtsTree.get_art_selections()
+        )
 
-        if src_tree.topLevelItemCount() != 1:
+        source = (
+            source_selections[0]
+            if source_selections
+            else None
+        )
+
+        validation = self.art_copy_validator.validate(
+            source,
+            destination_selections,
+        )
+
+        # 1. Блокирующие ошибки
+        if validation.blocking_issues:
+            message = "\n".join(
+                issue.message
+                for issue in validation.blocking_issues
+            )
+
             QMessageBox.warning(
                 self,
-                "Error",
-                "Select exactly one source ART."
+                "Copy validation",
+                message,
             )
             return
 
-        if dst_tree.topLevelItemCount() == 0:
-            QMessageBox.warning(
-                self,
-                "Error",
-                "Select at least one destination ART."
-            )
+        # После blocking validation source уже гарантированно существует
+        if source is None:
             return
 
-        source_item = src_tree.topLevelItem(0)
-        source_art = source_item.data(0, Qt.UserRole)
-
-        if not isinstance(source_art, Path):
-            QMessageBox.warning(
-                self,
-                "Error",
-                "Invalid source ART."
+        # 2. Отсутствующие ID
+        if validation.create_id_issues:
+            message = "\n".join(
+                issue.message
+                for issue in validation.create_id_issues
             )
-            return
 
-        destination_arts = []
-
-        for index in range(dst_tree.topLevelItemCount()):
-            item = dst_tree.topLevelItem(index)
-            path = item.data(0, Qt.UserRole)
-
-            if isinstance(path, Path):
-                destination_arts.append(path)
-
-        if not destination_arts:
-            QMessageBox.warning(
+            answer = QMessageBox.question(
                 self,
-                "Error",
-                "No destination ARTs found."
+                "Create missing IDs",
+                message + "\n\nCreate missing IDs and continue?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
             )
-            return
 
+            if answer != QMessageBox.Yes:
+                return
+
+        # 3. Копирование без замены
+        if validation.confirmation_issues:
+            message = "\n".join(
+                issue.message
+                for issue in validation.confirmation_issues
+            )
+
+            answer = QMessageBox.question(
+                self,
+                "Confirm copy",
+                message + "\n\nContinue without replacing existing files?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+
+            if answer != QMessageBox.Yes:
+                return
+
+        # 4. Строим готовый план
+        plan = self.art_copy_planner.build(
+            source,
+            destination_selections,
+        )
+
+        # 5. Дальше остаётся твоя существующая QThread-обвязка
         self.set_copy_processing_state(True)
 
         self.thread = QThread()
 
-        self.worker = ArtCopyWorker(source_art, destination_arts, self.art_copy_service, self.file_service)
+        self.worker = ArtCopyWorker(
+            plan,
+            self.art_copy_service,
+            self.file_service,
+        )
 
         self.worker.moveToThread(self.thread)
 
-        self.thread.started.connect(self.worker.run)
+        self.thread.started.connect(
+            self.worker.run
+        )
 
-        self.worker.progress.connect(self.on_copy_progress)
+        self.worker.progress.connect(
+            self.on_copy_progress
+        )
 
-        self.worker.finished.connect(self.on_copy_finished)
+        self.worker.finished.connect(
+            self.on_copy_finished
+        )
 
-        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(
+            self.thread.quit
+        )
 
-        self.worker.finished.connect(self.worker.deleteLater)
+        self.worker.finished.connect(
+            self.worker.deleteLater
+        )
 
-        self.thread.finished.connect(self.thread.deleteLater)
+        self.thread.finished.connect(
+            self.thread.deleteLater
+        )
 
         self.thread.start()
 

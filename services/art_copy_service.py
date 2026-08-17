@@ -42,3 +42,13 @@ class ArtCopyService:
                 shutil.copytree(item, destination)
             else:
                 shutil.copy2(item, destination)
+
+    def copy_file(
+            self,
+            source_file: Path,
+            destination_file: Path,
+    ):
+        shutil.copy2(
+            source_file,
+            destination_file,
+        )

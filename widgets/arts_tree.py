@@ -4,6 +4,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QMimeData
 from PySide6.QtGui import QDrag
 import json
+from models.copy_models import ArtSelection, SelectionState
 
 ART_MIME_TYPE = "application/x-eva-art"
 
@@ -269,11 +270,75 @@ class ArtsTree(QTreeWidget):
             self.add_art(art_path)
 
         event.acceptProposedAction()
-        # self.set_item_checked()
-        # self.set_single_art_mode(True)
-        #
-        # self.selected_art()
-        #
-        # self.dragEnterEvent()
-        # self.dropEvent()
-        # self.mimeData()
+
+    def get_art_selections(self) -> list[ArtSelection]:
+        selections = []
+
+        for art_index in range(self.topLevelItemCount()):
+            art_item = self.topLevelItem(art_index)
+            art_path = art_item.data(0, Qt.UserRole)
+
+            if not isinstance(art_path, Path):
+                continue
+
+            id_states = {}
+            files_by_id = {}
+
+            for id_index in range(art_item.childCount()):
+                id_item = art_item.child(id_index)
+                id_path = id_item.data(0, Qt.UserRole)
+
+                if not isinstance(id_path, Path):
+                    continue
+
+                state = self.get_id_selection_state(id_item)
+                id_states[id_path] = state
+
+                checked_files = []
+
+                for file_index in range(id_item.childCount()):
+                    file_item = id_item.child(file_index)
+
+                    if file_item.checkState(0) != Qt.Checked:
+                        continue
+
+                    file_path = file_item.data(0, Qt.UserRole)
+
+                    if isinstance(file_path, Path):
+                        checked_files.append(file_path)
+
+                files_by_id[id_path] = checked_files
+
+            selections.append(
+                ArtSelection(
+                    art_path=art_path,
+                    id_states=id_states,
+                    files_by_id=files_by_id,
+                )
+            )
+
+        return selections
+
+    def get_id_selection_state(
+            self,
+            id_item: QTreeWidgetItem,
+    ) -> SelectionState:
+
+        if id_item.childCount() == 0:
+            return SelectionState.NONE
+
+        checked_count = 0
+
+        for index in range(id_item.childCount()):
+            file_item = id_item.child(index)
+
+            if file_item.checkState(0) == Qt.Checked:
+                checked_count += 1
+
+        if checked_count == 0:
+            return SelectionState.NONE
+
+        if checked_count == id_item.childCount():
+            return SelectionState.FULL
+
+        return SelectionState.PARTIAL
