@@ -20,6 +20,7 @@ class CopyArtsPage(QWidget):
 
     def setup_connections(self):
         self.load_arts_btn.clicked.connect(self.on_load_arts_clicked)
+        self.copyAndRenameButton.clicked.connect(self.on_copy_and_rename_clicked)
 
     def setup_ui(self):
         main_layout = QGridLayout(self)

@@ -34,6 +34,27 @@ class FileService:
             renamed=renamed,
         )
 
+    def get_dxf_files(self, art_path: Path) -> list[Path]:
+        files = []
+
+        if not art_path.is_dir():
+            return files
+
+        for id_folder in art_path.iterdir():
+            if not id_folder.is_dir():
+                continue
+
+            for file in id_folder.iterdir():
+                if not file.is_file():
+                    continue
+
+                if file.suffix.lower() != ".dxf":
+                    continue
+
+                files.append(file)
+
+        return sorted(files, key=lambda path: str(path))
+
     def rename_one_file(self, file: Path, result: "RenameResult") -> RenameFileResult:
         renamed = False
         need_rename = False

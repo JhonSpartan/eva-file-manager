@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QPushButton, QLabel,
     QVBoxLayout, QHBoxLayout, QGridLayout, QGroupBox, QLineEdit,
-    QStackedWidget, QMessageBox, QFileDialog, QListWidgetItem, QTreeWidgetItem
+    QStackedWidget, QMessageBox, QFileDialog, QListWidgetItem, QTreeWidgetItem, QAbstractItemView
 )
 from PySide6.QtGui import QFont, QIcon
 from PySide6.QtCore import Qt, QTimer, QThread
@@ -222,6 +222,20 @@ class MainWindow(QMainWindow):
         self.edit_page.replace_btn.setEnabled(not processing)
         self.edit_page.remove_files_btn.setEnabled(not processing)
 
+    def set_copy_processing_state(self, processing: bool):
+
+        self.copy_page.load_arts_btn.setEnabled(
+            not processing
+        )
+
+        self.copy_page.removeArtNumbers.setEnabled(
+            not processing
+        )
+
+        self.copy_page.copyAndRenameButton.setEnabled(
+            not processing
+        )
+
     def start_rename(self):
         self.set_processing_state(True)
         self.thread = QThread()
@@ -357,6 +371,14 @@ class MainWindow(QMainWindow):
         source_item = src_tree.topLevelItem(0)
         source_art = source_item.data(0, Qt.UserRole)
 
+        if not isinstance(source_art, Path):
+            QMessageBox.warning(
+                self,
+                "Error",
+                "Invalid source ART."
+            )
+            return
+
         destination_arts = []
 
         for index in range(dst_tree.topLevelItemCount()):
@@ -366,14 +388,6 @@ class MainWindow(QMainWindow):
             if isinstance(path, Path):
                 destination_arts.append(path)
 
-        if not isinstance(source_art, Path):
-            QMessageBox.warning(
-                self,
-                "Error",
-                "Invalid source ART."
-            )
-            return
-
         if not destination_arts:
             QMessageBox.warning(
                 self,
@@ -382,38 +396,25 @@ class MainWindow(QMainWindow):
             )
             return
 
-        self.set_processing_state(True)
+        self.set_copy_processing_state(True)
 
         self.thread = QThread()
-        self.worker = ArtCopyWorker(
-            source_art,
-            destination_arts,
-            self.art_copy_service,
-        )
+
+        self.worker = ArtCopyWorker(source_art, destination_arts, self.art_copy_service, self.file_service)
 
         self.worker.moveToThread(self.thread)
 
         self.thread.started.connect(self.worker.run)
 
-        self.worker.progress.connect(
-            self.on_copy_progress
-        )
+        self.worker.progress.connect(self.on_copy_progress)
 
-        self.worker.finished.connect(
-            self.on_copy_finished
-        )
+        self.worker.finished.connect(self.on_copy_finished)
 
-        self.worker.finished.connect(
-            self.thread.quit
-        )
+        self.worker.finished.connect(self.thread.quit)
 
-        self.worker.finished.connect(
-            self.worker.deleteLater
-        )
+        self.worker.finished.connect(self.worker.deleteLater)
 
-        self.thread.finished.connect(
-            self.thread.deleteLater
-        )
+        self.thread.finished.connect(self.thread.deleteLater)
 
         self.thread.start()
 
@@ -423,7 +424,7 @@ class MainWindow(QMainWindow):
 
     def on_copy_finished(self, result):
 
-        self.set_processing_state(False)
+        self.set_copy_processing_state(False)
 
         if isinstance(result, Exception):
             QMessageBox.critical(
@@ -433,10 +434,20 @@ class MainWindow(QMainWindow):
             )
             return
 
+        summary = [
+            f"{result.renamed_files} filenames renamed.",
+            f'{result.renamed_layers} "nadpis" layers updated.',
+        ]
+
+        if result.errors:
+            summary.append(
+                f"{len(result.errors)} errors."
+            )
+
         QMessageBox.information(
             self,
             "Done",
-            "ARTs copied successfully.",
+            "\n".join(summary),
         )
 
 

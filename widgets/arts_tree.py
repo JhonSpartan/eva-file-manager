@@ -3,6 +3,7 @@ from enum import Enum
 from pathlib import Path
 from PySide6.QtCore import Qt, QMimeData
 from PySide6.QtGui import QDrag
+import json
 
 ART_MIME_TYPE = "application/x-eva-art"
 
@@ -31,6 +32,7 @@ class ArtsTree(QTreeWidget):
         self.setIndentation(18)
         self.setUniformRowHeights(True)
         self.setExpandsOnDoubleClick(True)
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setup_drag_drop()
 
         self.itemChanged.connect(self.on_item_changed)
@@ -178,20 +180,38 @@ class ArtsTree(QTreeWidget):
                 return
 
     def startDrag(self, supportedActions):
-        item = self.currentItem()
 
-        if item is None:
+        selected_items = self.selectedItems()
+
+        if not selected_items:
             return
 
-        path = item.data(0, Qt.UserRole)
+        paths = []
 
-        if not isinstance(path, Path):
+        for item in selected_items:
+
+            # Перетаскивать можно только ART верхнего уровня
+            if item.parent() is not None:
+                continue
+
+            path = item.data(0, Qt.UserRole)
+
+            if not isinstance(path, Path):
+                continue
+
+            if not path.is_dir():
+                continue
+
+            paths.append(str(path))
+
+        if not paths:
             return
 
         mime_data = QMimeData()
+
         mime_data.setData(
             ART_MIME_TYPE,
-            str(path).encode("utf-8")
+            json.dumps(paths).encode("utf-8")
         )
 
         drag = QDrag(self)
@@ -200,21 +220,53 @@ class ArtsTree(QTreeWidget):
         result = drag.exec(Qt.MoveAction)
 
         if result == Qt.MoveAction:
-            self._remove_art(path)
+            for path in paths:
+                self._remove_art(Path(path))
 
     def dropEvent(self, event):
+
         if not event.mimeData().hasFormat(ART_MIME_TYPE):
             event.ignore()
             return
 
         data = event.mimeData().data(ART_MIME_TYPE)
-        path = Path(bytes(data).decode("utf-8"))
 
-        if not path.is_dir():
+        try:
+            paths = json.loads(
+                bytes(data).decode("utf-8")
+            )
+        except (json.JSONDecodeError, UnicodeDecodeError):
             event.ignore()
             return
 
-        self.add_art(path)
+        if not isinstance(paths, list):
+            event.ignore()
+            return
+
+        arts = []
+
+        for raw_path in paths:
+
+            path = Path(raw_path)
+
+            if not path.is_dir():
+                continue
+
+            arts.append(path)
+
+        if not arts:
+            event.ignore()
+            return
+
+        # SOURCE может содержать только один ART
+        if self.mode == ArtsTreeMode.SOURCE:
+
+            if self.topLevelItemCount() + len(arts) > 1:
+                event.ignore()
+                return
+
+        for art_path in arts:
+            self.add_art(art_path)
 
         event.acceptProposedAction()
         # self.set_item_checked()
