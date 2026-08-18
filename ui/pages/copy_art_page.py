@@ -21,6 +21,10 @@ class CopyArtsPage(QWidget):
     def setup_connections(self):
         self.load_arts_btn.clicked.connect(self.on_load_arts_clicked)
         self.copyAndRenameButton.clicked.connect(self.on_copy_and_rename_clicked)
+        self.removeSrcArtsButton.clicked.connect(self.srcArtsTree.remove_selected_arts)
+        self.clearSrcArtsButton.clicked.connect(self.srcArtsTree.clear_tree)
+        self.removeDstArtsButton.clicked.connect(self.dstArtsTree.remove_selected_arts)
+        self.clearDstArtsButton.clicked.connect(self.dstArtsTree.clear_tree)
 
     def setup_ui(self):
         main_layout = QGridLayout(self)
@@ -78,6 +82,19 @@ class CopyArtsPage(QWidget):
 
         main_layout.addLayout(right_column, 1, 1)
 
+        # ===Tree controls ========= (row 1) ===========
+        self.removeSrcArtsButton = QPushButton("Remove selected")
+        self.clearSrcArtsButton = QPushButton("Clear")
+
+        self.removeDstArtsButton = QPushButton("Remove selected")
+        self.clearDstArtsButton = QPushButton("Clear")
+
+        from_layout.addWidget(self.removeSrcArtsButton)
+        from_layout.addWidget(self.clearSrcArtsButton)
+
+        to_layout.addWidget(self.removeDstArtsButton)
+        to_layout.addWidget(self.clearDstArtsButton)
+
         # ==================================================
         # === Progress bar (row 2, full width) ============
         # ==================================================
@@ -111,6 +128,10 @@ class CopyArtsPage(QWidget):
             "dstArts": self.dstArtsTree,
             "removeArts": self.removeArtNumbers,
             "copy": self.copyAndRenameButton,
+            "removeSrc": self.removeSrcArtsButton,
+            "clearSrc": self.clearSrcArtsButton,
+            "removeDst": self.removeDstArtsButton,
+            "clearDst": self.clearDstArtsButton,
             "progress": self.copyAndRenamePbar,
         }
 
@@ -119,3 +140,4 @@ class CopyArtsPage(QWidget):
 
     def on_copy_and_rename_clicked(self):
         self.copyAndRenameRequested.emit()
+

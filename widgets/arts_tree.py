@@ -112,7 +112,14 @@ class ArtsTree(QTreeWidget):
             item: QTreeWidgetItem,
             column: int,
     ):
-        self.update_children(item)
+        self.blockSignals(True)
+
+        try:
+            self.update_children(item)
+            self.update_parent(item)
+
+        finally:
+            self.blockSignals(False)
 
     def update_children(
             self,
@@ -123,11 +130,13 @@ class ArtsTree(QTreeWidget):
 
         state = item.checkState(0)
 
-        self.blockSignals(True)
+        if state == Qt.PartiallyChecked:
+            return
 
-        self.set_children_state(item, state)
-
-        self.blockSignals(False)
+        self.set_children_state(
+            item,
+            state,
+        )
 
     def set_children_state(
             self,
@@ -342,3 +351,52 @@ class ArtsTree(QTreeWidget):
             return SelectionState.FULL
 
         return SelectionState.PARTIAL
+
+    def update_parent(
+            self,
+            item: QTreeWidgetItem,
+    ):
+        parent = item.parent()
+
+        if parent is None:
+            return
+
+        states = [
+            parent.child(index).checkState(0)
+            for index in range(parent.childCount())
+        ]
+
+        if all(
+                state == Qt.Checked
+                for state in states
+        ):
+            parent_state = Qt.Checked
+
+        elif all(
+                state == Qt.Unchecked
+                for state in states
+        ):
+            parent_state = Qt.Unchecked
+
+        else:
+            parent_state = Qt.PartiallyChecked
+
+        parent.setCheckState(
+            0,
+            parent_state,
+        )
+
+        self.update_parent(parent)
+
+    def remove_selected_arts(self):
+        selected_items = self.selectedItems()
+
+        for item in selected_items:
+            # удаляем только ART верхнего уровня
+            if item.parent() is not None:
+                continue
+
+            index = self.indexOfTopLevelItem(item)
+
+            if index != -1:
+                self.takeTopLevelItem(index)

@@ -106,6 +106,7 @@ class ArtCopyValidator:
             CopyValidationIssue(
                 issue_type=ValidationIssueType.MISSING_DESTINATION_ID,
                 destination_art=destination.art_path,
+                action=ValidationAction.CREATE_ID,
                 id_name=id_name,
                 message=(
                     f'ID "{id_name}" does not exist in '
@@ -131,6 +132,7 @@ class ArtCopyValidator:
             result.issues.append(
                 CopyValidationIssue(
                     issue_type=ValidationIssueType.DESTINATION_ID_NOT_SELECTED,
+                    action=ValidationAction.BLOCK,
                     destination_art=destination.art_path,
                     id_name=source_id_path.name,
                     message=(
@@ -149,6 +151,7 @@ class ArtCopyValidator:
             result.issues.append(
                 CopyValidationIssue(
                     issue_type=ValidationIssueType.ADD_FILES_WITHOUT_REPLACEMENT,
+                    action=ValidationAction.CONFIRM,
                     destination_art=destination.art_path,
                     id_name=source_id_path.name,
                     message=(
