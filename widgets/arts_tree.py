@@ -152,29 +152,25 @@ class ArtsTree(QTreeWidget):
     def setup_drag_drop(self):
 
         self.setDragEnabled(True)
+        self.setAcceptDrops(True)
         self.setDropIndicatorShown(True)
 
-        if self.mode == ArtsTreeMode.AVAILABLE:
-            self.setAcceptDrops(False)
-        else:
-            self.setAcceptDrops(True)
-
         self.setDragDropMode(QAbstractItemView.DragDrop)
+        self.setDefaultDropAction(Qt.MoveAction)
 
     def dragEnterEvent(self, event):
-        if self.mode == ArtsTreeMode.AVAILABLE:
-            event.ignore()
-            return
-
         if event.mimeData().hasFormat(ART_MIME_TYPE):
-            event.acceptProposedAction()
+            event.setDropAction(Qt.MoveAction)
+            event.accept()
         else:
             event.ignore()
 
     def dragMoveEvent(self, event):
-        if self.mode == ArtsTreeMode.AVAILABLE:
+        if event.mimeData().hasFormat(ART_MIME_TYPE):
+            event.setDropAction(Qt.MoveAction)
+            event.accept()
+        else:
             event.ignore()
-            return
 
         if event.mimeData().hasFormat(ART_MIME_TYPE):
             event.acceptProposedAction()
@@ -190,7 +186,6 @@ class ArtsTree(QTreeWidget):
                 return
 
     def startDrag(self, supportedActions):
-
         selected_items = self.selectedItems()
 
         if not selected_items:
@@ -200,7 +195,7 @@ class ArtsTree(QTreeWidget):
 
         for item in selected_items:
 
-            # Перетаскивать можно только ART верхнего уровня
+            # Только ART верхнего уровня
             if item.parent() is not None:
                 continue
 
@@ -218,7 +213,6 @@ class ArtsTree(QTreeWidget):
             return
 
         mime_data = QMimeData()
-
         mime_data.setData(
             ART_MIME_TYPE,
             json.dumps(paths).encode("utf-8")
@@ -234,8 +228,12 @@ class ArtsTree(QTreeWidget):
                 self._remove_art(Path(path))
 
     def dropEvent(self, event):
-
         if not event.mimeData().hasFormat(ART_MIME_TYPE):
+            event.ignore()
+            return
+
+        # Не разрешаем бросать ART обратно в то же самое дерево
+        if event.source() is self:
             event.ignore()
             return
 
@@ -256,21 +254,17 @@ class ArtsTree(QTreeWidget):
         arts = []
 
         for raw_path in paths:
-
             path = Path(raw_path)
 
-            if not path.is_dir():
-                continue
-
-            arts.append(path)
+            if path.is_dir():
+                arts.append(path)
 
         if not arts:
             event.ignore()
             return
 
-        # SOURCE может содержать только один ART
+        # SOURCE — максимум один ART
         if self.mode == ArtsTreeMode.SOURCE:
-
             if self.topLevelItemCount() + len(arts) > 1:
                 event.ignore()
                 return
@@ -278,7 +272,8 @@ class ArtsTree(QTreeWidget):
         for art_path in arts:
             self.add_art(art_path)
 
-        event.acceptProposedAction()
+        event.setDropAction(Qt.MoveAction)
+        event.accept()
 
     def get_art_selections(self) -> list[ArtSelection]:
         selections = []
@@ -400,3 +395,7 @@ class ArtsTree(QTreeWidget):
 
             if index != -1:
                 self.takeTopLevelItem(index)
+
+    def refresh_art(self, art_path: Path):
+        self._remove_art(art_path)
+        self.add_art(art_path)

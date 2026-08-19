@@ -4,11 +4,25 @@ from models.copy_models import (
     ArtSelection,
     SelectionState,
     CopyPlan,
-    DestinationCopyPlan,
+    DestinationCopyPlan, FileCopyOperation,
 )
 
 
 class ArtCopyPlanner:
+
+    def _add_copy_operations(
+            self,
+            plan: DestinationCopyPlan,
+            source_files: list[Path],
+            destination_id: Path,
+    ):
+        for source_file in source_files:
+            plan.copy_operations.append(
+                FileCopyOperation(
+                    source_file=source_file,
+                    destination_id=destination_id,
+                )
+            )
 
     def _build_destination_plan(
             self,
@@ -40,7 +54,9 @@ class ArtCopyPlanner:
 
             if destination_id_path is None:
                 plan.ids_to_create.append(id_name)
-                plan.files_to_copy.extend(source_files)
+
+                destination_id = (destination.art_path / id_name)
+                self._add_copy_operations(plan, source_files, destination_id)
                 continue
 
             destination_state = destination.id_states[
@@ -53,13 +69,9 @@ class ArtCopyPlanner:
             )
 
             if destination_state != SelectionState.NONE:
-                plan.files_to_delete.extend(
-                    destination_files
-                )
+                plan.files_to_delete.extend(destination_files)
 
-            plan.files_to_copy.extend(
-                source_files
-            )
+            self._add_copy_operations(plan, source_files, destination_id_path)
 
         return plan
 

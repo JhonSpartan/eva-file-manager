@@ -70,12 +70,9 @@ class CopyValidationResult:
 @dataclass
 class DestinationCopyPlan:
     destination_art: Path
-
     ids_to_create: list[str] = field(default_factory=list)
-
     files_to_delete: list[Path] = field(default_factory=list)
-
-    files_to_copy: list[Path] = field(default_factory=list)
+    copy_operations: list[FileCopyOperation] = field(default_factory=list)
 
 @dataclass
 class CopyPlan:
@@ -83,3 +80,22 @@ class CopyPlan:
     destinations: list[DestinationCopyPlan] = field(
         default_factory=list
     )
+
+    @property
+    def is_empty(self) -> bool:
+        for destination in self.destinations:
+            if destination.ids_to_create:
+                return False
+
+            if destination.files_to_delete:
+                return False
+
+            if destination.copy_operations:
+                return False
+
+        return True
+
+@dataclass
+class FileCopyOperation:
+    source_file: Path
+    destination_id: Path

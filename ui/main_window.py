@@ -431,6 +431,16 @@ class MainWindow(QMainWindow):
             destination_selections,
         )
 
+        if plan.is_empty:
+            QMessageBox.information(
+                self,
+                "Nothing to do",
+                "No operations selected."
+            )
+            return
+
+        self.current_copy_plan = plan
+
         # 5. Дальше остаётся твоя существующая QThread-обвязка
         self.set_copy_processing_state(True)
 
@@ -475,7 +485,6 @@ class MainWindow(QMainWindow):
         self.copy_page.copyAndRenamePbar.setValue(current)
 
     def on_copy_finished(self, result):
-
         self.set_copy_processing_state(False)
 
         if isinstance(result, Exception):
@@ -484,12 +493,43 @@ class MainWindow(QMainWindow):
                 "Copy error",
                 str(result),
             )
+            self.current_copy_plan = None
             return
 
-        summary = [
-            f"{result.renamed_files} filenames renamed.",
-            f'{result.renamed_layers} "nadpis" layers updated.',
-        ]
+        if self.current_copy_plan is not None:
+            for destination_plan in self.current_copy_plan.destinations:
+                self.copy_page.dstArtsTree.refresh_art(
+                    destination_plan.destination_art
+                )
+
+        self.current_copy_plan = None
+
+        summary = []
+
+        if result.created_ids:
+            summary.append(
+                f"{result.created_ids} IDs created."
+            )
+
+        if result.deleted_files:
+            summary.append(
+                f"{result.deleted_files} files deleted."
+            )
+
+        if result.copied_files:
+            summary.append(
+                f"{result.copied_files} files copied."
+            )
+
+        if result.renamed_files:
+            summary.append(
+                f"{result.renamed_files} filenames renamed."
+            )
+
+        if result.renamed_layers:
+            summary.append(
+                f'{result.renamed_layers} "nadpis" layers updated.'
+            )
 
         if result.errors:
             summary.append(
@@ -499,7 +539,7 @@ class MainWindow(QMainWindow):
         QMessageBox.information(
             self,
             "Done",
-            "\n".join(summary),
+            "\n".join(summary) or "No changes made.",
         )
 
 
@@ -513,15 +553,14 @@ class MainWindow(QMainWindow):
 
 
 
-
-    def show_replaced_files(self, find_text: str, replace_text: str):
-        if not find_text:
-            QMessageBox.warning(self, "Error", "Find field can't be empty")
-            return
-
-        if find_text == replace_text:
-            QMessageBox.warning(self, "Error", "Find and Replace are the same — nothing to do.")
-            return
+    # def show_replaced_files(self, find_text: str, replace_text: str):
+    #     if not find_text:
+    #         QMessageBox.warning(self, "Error", "Find field can't be empty")
+    #         return
+    #
+    #     if find_text == replace_text:
+    #         QMessageBox.warning(self, "Error", "Find and Replace are the same — nothing to do.")
+    #         return
 
 
 
