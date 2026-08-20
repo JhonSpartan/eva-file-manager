@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (
     QWidget, QLabel, QPushButton, QLineEdit, QListWidget,
-    QProgressBar, QVBoxLayout, QHBoxLayout, QGridLayout, QGroupBox, QTreeWidget
+    QProgressBar, QVBoxLayout, QHBoxLayout, QGridLayout,
+    QGroupBox, QTreeWidget, QCheckBox
 )
 from PySide6.QtCore import Qt, Signal
 from widgets.arts_tree import ArtsTree, ArtsTreeMode
@@ -105,10 +106,14 @@ class CopyArtsPage(QWidget):
         # ==================================================
         # === Buttons (row 3) ==============================
         # ==================================================
-        self.removeArtNumbers = QPushButton("Remove article numbers")
+        # self.removeArtNumbers = QPushButton("Remove article numbers")
         self.copyAndRenameButton = QPushButton("Copy and rename")
+        self.fiveDModeCheckbox = QCheckBox("5D mode")
 
-        main_layout.addWidget(self.removeArtNumbers, 3, 0)
+#         main_layout.addWidget(self.removeArtNumbers, 3, 0)
+        main_layout.addWidget(self.copyAndRenameButton, 3, 1)
+
+        main_layout.addWidget(self.fiveDModeCheckbox, 3, 0)
         main_layout.addWidget(self.copyAndRenameButton, 3, 1)
 
         # ==================================================
@@ -126,13 +131,14 @@ class CopyArtsPage(QWidget):
             "artsTree": self.artsTree,
             "srcArts": self.srcArtsTree,
             "dstArts": self.dstArtsTree,
-            "removeArts": self.removeArtNumbers,
+            # "removeArts": self.removeArtNumbers,
             "copy": self.copyAndRenameButton,
             "removeSrc": self.removeSrcArtsButton,
             "clearSrc": self.clearSrcArtsButton,
             "removeDst": self.removeDstArtsButton,
             "clearDst": self.clearDstArtsButton,
             "progress": self.copyAndRenamePbar,
+            "5DMode": self.fiveDModeCheckbox,
         }
 
     def on_load_arts_clicked(self):

@@ -352,6 +352,8 @@ class MainWindow(QMainWindow):
         self.edit_page.replace_input.clear()
 
     def start_copy_art(self):
+        five_d_mode = self.copy_page.fiveDModeCheckbox.isChecked()
+
         source_selections = (
             self.copy_page.srcArtsTree.get_art_selections()
         )
@@ -429,6 +431,7 @@ class MainWindow(QMainWindow):
         plan = self.art_copy_planner.build(
             source,
             destination_selections,
+            five_d_mode=five_d_mode,
         )
 
         if plan.is_empty:
