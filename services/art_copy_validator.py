@@ -1,4 +1,5 @@
 from pathlib import Path
+from services.copy_rules import resolve_destination_id_name
 
 from models.copy_models import (
     ArtSelection,
@@ -14,6 +15,7 @@ class ArtCopyValidator:
             self,
             source: ArtSelection | None,
             destinations: list[ArtSelection],
+            five_d_mode: bool = False,
     ) -> CopyValidationResult:
 
         result = CopyValidationResult()
@@ -50,6 +52,7 @@ class ArtCopyValidator:
                 source,
                 destination,
                 result,
+                five_d_mode,
             )
 
         return result
@@ -59,6 +62,7 @@ class ArtCopyValidator:
             source: ArtSelection,
             destination: ArtSelection,
             result: CopyValidationResult,
+            five_d_mode: bool,
     ):
         destination_ids = {
             id_path.name: id_path
@@ -70,14 +74,21 @@ class ArtCopyValidator:
             if source_state == SelectionState.NONE:
                 continue
 
-            id_name = source_id_path.name
+            source_id_name = source_id_path.name
 
-            destination_id_path = destination_ids.get(id_name)
+            destination_id_name = resolve_destination_id_name(
+                source_id_name,
+                five_d_mode,
+            )
+
+            destination_id_path = destination_ids.get(
+                destination_id_name
+            )
 
             if destination_id_path is None:
                 self._add_missing_id_issue(
                     destination,
-                    id_name,
+                    destination_id_name,
                     result,
                 )
                 continue
@@ -136,10 +147,10 @@ class ArtCopyValidator:
                     destination_art=destination.art_path,
                     id_name=source_id_path.name,
                     message=(
-                        f'ID "{source_id_path.name}" already exists in '
+                        f'ID "{destination_id_path.name}" already exists in '
                         f'"{destination.art_path.name}", '
                         f"but it is not selected for replacement."
-                    ),
+                    )
                 )
             )
             return
@@ -156,9 +167,9 @@ class ArtCopyValidator:
                     id_name=source_id_path.name,
                     message=(
                         f'No files are selected for replacement in '
-                        f'ID "{source_id_path.name}" of '
+                        f'ID "{destination_id_path.name}" of '
                         f'"{destination.art_path.name}".'
-                    ),
+                    )
                 )
             )
             return

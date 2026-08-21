@@ -232,10 +232,6 @@ class MainWindow(QMainWindow):
             not processing
         )
 
-        self.copy_page.removeArtNumbers.setEnabled(
-            not processing
-        )
-
         self.copy_page.copyAndRenameButton.setEnabled(
             not processing
         )
@@ -371,6 +367,7 @@ class MainWindow(QMainWindow):
         validation = self.art_copy_validator.validate(
             source,
             destination_selections,
+            five_d_mode=five_d_mode,
         )
 
         # 1. Блокирующие ошибки
