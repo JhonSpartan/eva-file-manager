@@ -1,9 +1,25 @@
-def resolve_destination_id_name(
-        source_id_name: str,
-        five_d_mode: bool,
-) -> str:
+from database.repositories.copy_rule_repository import CopyRuleRepository
 
-    if five_d_mode and source_id_name == "8":
-        return "7"
+class CopyRuleService:
 
-    return source_id_name
+    def __init__(
+            self,
+            repository: CopyRuleRepository,
+    ):
+        self.repository = repository
+
+    def resolve_destination_id_name(
+            self,
+            source_id_name: str,
+            mode: str | None,
+    ) -> str:
+
+        if mode is None:
+            return source_id_name
+
+        destination_id = self.repository.get_destination_id(
+            mode,
+            source_id_name,
+        )
+
+        return destination_id or source_id_name

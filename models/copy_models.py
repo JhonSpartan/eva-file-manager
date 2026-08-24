@@ -3,6 +3,8 @@ from pathlib import Path
 from enum import Enum, auto
 
 
+
+
 class SelectionState(Enum):
     NONE = 0
     PARTIAL = 1
@@ -99,3 +101,10 @@ class CopyPlan:
 class FileCopyOperation:
     source_file: Path
     destination_id: Path
+
+
+@dataclass(frozen=True)
+class CopyRule:
+    mode: str
+    from_id: str
+    to_id: str

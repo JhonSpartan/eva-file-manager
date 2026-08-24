@@ -1,5 +1,4 @@
 from pathlib import Path
-from services.copy_rules import resolve_destination_id_name
 
 from models.copy_models import (
     ArtSelection,
@@ -8,9 +7,17 @@ from models.copy_models import (
     CopyValidationResult,
     ValidationIssueType, ValidationAction,
 )
+from services.copy_rules import CopyRuleService
 
 
 class ArtCopyValidator:
+
+    def __init__(
+            self,
+            copy_rule_service: CopyRuleService,
+    ):
+        self.copy_rule_service = copy_rule_service
+
     def validate(
             self,
             source: ArtSelection | None,
@@ -76,9 +83,13 @@ class ArtCopyValidator:
 
             source_id_name = source_id_path.name
 
-            destination_id_name = resolve_destination_id_name(
-                source_id_name,
-                five_d_mode,
+            mode = "5D" if five_d_mode else None
+
+            destination_id_name = (
+                self.copy_rule_service.resolve_destination_id_name(
+                    source_id_name,
+                    mode,
+                )
             )
 
             destination_id_path = destination_ids.get(
@@ -145,7 +156,7 @@ class ArtCopyValidator:
                     issue_type=ValidationIssueType.DESTINATION_ID_NOT_SELECTED,
                     action=ValidationAction.BLOCK,
                     destination_art=destination.art_path,
-                    id_name=source_id_path.name,
+                    id_name=destination_id_path.name,
                     message=(
                         f'ID "{destination_id_path.name}" already exists in '
                         f'"{destination.art_path.name}", '
@@ -164,7 +175,7 @@ class ArtCopyValidator:
                     issue_type=ValidationIssueType.ADD_FILES_WITHOUT_REPLACEMENT,
                     action=ValidationAction.CONFIRM,
                     destination_art=destination.art_path,
-                    id_name=source_id_path.name,
+                    id_name=destination_id_path.name,
                     message=(
                         f'No files are selected for replacement in '
                         f'ID "{destination_id_path.name}" of '

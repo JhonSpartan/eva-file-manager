@@ -1,5 +1,4 @@
 from pathlib import Path
-from services.copy_rules import resolve_destination_id_name
 
 from models.copy_models import (
     ArtSelection,
@@ -7,19 +6,16 @@ from models.copy_models import (
     CopyPlan,
     DestinationCopyPlan, FileCopyOperation,
 )
+from services.copy_rules import CopyRuleService
 
 
 class ArtCopyPlanner:
 
-    def _resolve_destination_id_name(
+    def __init__(
             self,
-            source_id_name: str,
-            five_d_mode: bool,
-    ) -> str:
-        if five_d_mode and source_id_name == "8":
-            return "7"
-
-        return source_id_name
+            copy_rule_service: CopyRuleService,
+    ):
+        self.copy_rule_service = copy_rule_service
 
     def _add_copy_operations(
             self,
@@ -58,9 +54,13 @@ class ArtCopyPlanner:
 
             source_id_name = source_id_path.name
 
-            destination_id_name = self._resolve_destination_id_name(
-                source_id_name,
-                five_d_mode,
+            mode = "5D" if five_d_mode else None
+
+            destination_id_name = (
+                self.copy_rule_service.resolve_destination_id_name(
+                    source_id_name,
+                    mode,
+                )
             )
 
             destination_id_path = destination_ids.get(

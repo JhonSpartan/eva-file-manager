@@ -23,6 +23,10 @@ from workers.art_copy_worker import ArtCopyWorker
 from workers.rename_worker import RenameWorker
 from workers.replace_worker import ReplaceWorker
 
+from database.database import Database
+from database.repositories.copy_rule_repository import CopyRuleRepository
+from services.copy_rules import CopyRuleService
+
 class Ui_MainWindow:
     def setup_ui(self, MainWindow):
         MainWindow.setWindowTitle("EVA Configurator")
@@ -96,10 +100,22 @@ class MainWindow(QMainWindow):
 
         self.file_service = FileService()
 
+        db_path = Path.home() / ".eva" / "eva.db"
+        db_path.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        self.database = Database(db_path)
+        self.database.initialize()
+
+        self.copy_rule_repository = CopyRuleRepository(self.database)
+        self.copy_rule_service = CopyRuleService(self.copy_rule_repository)
+        self.art_copy_validator = ArtCopyValidator(self.copy_rule_service)
+        self.art_copy_planner = ArtCopyPlanner(self.copy_rule_service)
         self.art_service = ArtService()
         self.art_copy_service = ArtCopyService()
-        self.art_copy_validator = ArtCopyValidator()
-        self.art_copy_planner = ArtCopyPlanner()
+
 
         self.edit_page.loadFilesRequested.connect(
             self.on_load_files_requested
@@ -122,6 +138,7 @@ class MainWindow(QMainWindow):
         self.copy_page.copyAndRenameRequested.connect(
             self.start_copy_art
         )
+
 
     def setup_connections(self):
         # === Меню слева ===
