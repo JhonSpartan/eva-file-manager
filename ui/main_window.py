@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QPushButton, QLabel,
     QVBoxLayout, QHBoxLayout, QGridLayout, QGroupBox, QLineEdit,
-    QStackedWidget, QMessageBox, QFileDialog, QListWidgetItem, QTreeWidgetItem, QAbstractItemView
+    QStackedWidget, QMessageBox, QFileDialog, QListWidgetItem, QTreeWidgetItem, QAbstractItemView, QDialog
 )
 from PySide6.QtGui import QFont, QIcon
 from PySide6.QtCore import Qt, QTimer, QThread
@@ -9,11 +9,15 @@ from PySide6.QtCore import Qt, QTimer, QThread
 import pathlib
 from pathlib import Path
 
+from database.repositories.template_repository import TemplateRepository
 from models.results import RenameFileResult
 from services.art_copy_planner import ArtCopyPlanner
 from services.art_copy_service import ArtCopyService
 from services.art_copy_validator import ArtCopyValidator
+from services.template_service import TemplateService
+from ui.dialogs.template_dialog import TemplateDialog
 from ui.pages.copy_art_page import CopyArtsPage
+from ui.pages.database_page import DatabasePage
 from ui.pages.eva_page import EvaPage
 from ui.pages.edit_files_page import EditFilesPage
 
@@ -45,8 +49,9 @@ class Ui_MainWindow:
         self.btn_eva = QPushButton("EVA")
         self.btn_other1 = QPushButton("Другая страница 1")
         self.btn_other2 = QPushButton("Другая страница 2")
+        self.btn_other3 = QPushButton("Другая страница 3")
 
-        for btn in (self.btn_eva, self.btn_other1, self.btn_other2):
+        for btn in (self.btn_eva, self.btn_other1, self.btn_other2, self.btn_other3):
             btn.setMinimumHeight(40)
             self.side_menu.addWidget(btn)
 
@@ -94,6 +99,9 @@ class MainWindow(QMainWindow):
         self.eva_page = EvaPage()
         self.ui.stacked_widget.addWidget(self.eva_page)
 
+        self.database_page = DatabasePage()
+        self.ui.stacked_widget.addWidget(self.database_page)
+
         self.files_to_rename: list[Path] = []
 
         self.files_for_replace: list[Path] = []
@@ -111,8 +119,16 @@ class MainWindow(QMainWindow):
 
         self.copy_rule_repository = CopyRuleRepository(self.database)
         self.copy_rule_service = CopyRuleService(self.copy_rule_repository)
+        self.template_repository = TemplateRepository(self.database)
+        self.template_service = TemplateService(self.template_repository)
+
+        self.database_page = DatabasePage()
+        self.ui.stacked_widget.addWidget(self.database_page)
+        self.load_template_database_table()
+
         self.art_copy_validator = ArtCopyValidator(self.copy_rule_service)
         self.art_copy_planner = ArtCopyPlanner(self.copy_rule_service)
+
         self.art_service = ArtService()
         self.art_copy_service = ArtCopyService()
 
@@ -138,6 +154,15 @@ class MainWindow(QMainWindow):
         self.copy_page.copyAndRenameRequested.connect(
             self.start_copy_art
         )
+        self.database_page.templatesTable.addRequested.connect(
+            self.on_add_template
+        )
+        self.database_page.templatesTable.editRequested.connect(
+            self.on_edit_template
+        )
+        self.database_page.templatesTable.deleteRequested.connect(
+            self.on_delete_templates
+        )
 
 
     def setup_connections(self):
@@ -145,6 +170,8 @@ class MainWindow(QMainWindow):
         self.ui.btn_eva.clicked.connect(lambda: self.ui.stacked_widget.setCurrentWidget(self.eva_page))
         self.ui.btn_other1.clicked.connect(lambda: self.ui.stacked_widget.setCurrentWidget(self.copy_page))
         self.ui.btn_other2.clicked.connect(lambda: self.ui.stacked_widget.setCurrentWidget(self.edit_page))
+        self.ui.btn_other3.clicked.connect(lambda: self.ui.stacked_widget.setCurrentWidget(self.database_page))
+
 
     def load_icons(self):
         self.check_icon = QIcon("resources/icons/check.svg")
@@ -559,75 +586,90 @@ class MainWindow(QMainWindow):
             "\n".join(summary) or "No changes made.",
         )
 
+    def load_template_database_table(self):
+        records = (
+            self.template_repository.get_all()
+        )
 
+        table_records = []
 
+        for record in records:
+            table_records.append(
+                {
+                    "id": record.id,
+                    "values": {
+                        "folder_id": record.folder_id,
+                        "template_name": record.template_name,
+                    },
+                }
+            )
 
+        self.database_page.templatesTable.render_records(
+            table_records
+        )
 
+    def on_add_template(self):
+        dialog = TemplateDialog(parent=self)
 
+        if dialog.exec() != QDialog.Accepted:
+            return
 
+        folder_id, template_name = dialog.get_data()
 
+        self.template_repository.add(
+            folder_id,
+            template_name,
+        )
 
+        self.load_template_database_table()
 
+    def on_edit_template(self, record_id: int):
+        record = self.template_repository.get_by_id(
+            record_id
+        )
 
+        if record is None:
+            return
 
-    # def show_replaced_files(self, find_text: str, replace_text: str):
-    #     if not find_text:
-    #         QMessageBox.warning(self, "Error", "Find field can't be empty")
-    #         return
-    #
-    #     if find_text == replace_text:
-    #         QMessageBox.warning(self, "Error", "Find and Replace are the same — nothing to do.")
-    #         return
+        dialog = TemplateDialog(
+            folder_id=record.folder_id,
+            template_name=record.template_name,
+            parent=self,
+        )
 
+        if dialog.exec() != QDialog.Accepted:
+            return
 
+        folder_id, template_name = dialog.get_data()
 
-    #     self.ui.add_btn.clicked.connect(self.on_add)
-    #     self.ui.clear_fields_btn.clicked.connect(self.on_clear_fields)
-    #     self.ui.add_stopers_btn.clicked.connect(self.on_add_stopers)
-    #
-    #     # === Кнопки на странице EVA ===
-    #     # Здесь можно будет добавить кнопки для EVA, если нужно
-    #     # Например, логика create/save/clear и т.д.
-    #     # self.ui.create_eva_btn.clicked.connect(self.on_create_eva)
-    #     # ...
-    # def on_add(self):
-    #     name = self.ui.eva_fields["name"].text().strip()
-    #     articles_text = self.ui.eva_fields["article_numbers"].text().strip()
-    #
-    #     if not name:
-    #         print("Введите имя EVA")
-    #         return
-    #
-    #     if not articles_text:
-    #         print("Введите хотя бы один артикул")
-    #         return
-    #
-    #     # Разделяем артикулы по запятой и удаляем лишние пробелы
-    #     articles = [a.strip() for a in articles_text.split(",") if a.strip()]
-    #
-    #     # Увеличиваем счетчик EVA
-    #     self.eva_counter += 1
-    #
-    #     # Формируем текст для QLabel
-    #     label_text = f"{self.eva_counter}. {name}: " + ", ".join(articles)
-    #
-    #     # Создаём QLabel и добавляем в layout prepared_eva_layout
-    #     label = QLabel(label_text)
-    #     label.setWordWrap(True)  # если артикулы длинные
-    #     row = self.ui.prepared_eva_layout.rowCount()  # следующая свободная строка
-    #     self.ui.prepared_eva_layout.addWidget(label, row, 0)
-    #
-    #     # Очистка полей после добавления
-    #     self.on_clear_fields()
-    #
-    # def on_clear_fields(self):
-    #     for field in self.ui.eva_fields.values():
-    #         field.clear()
-    #
-    # def on_add_stopers(self):
-    #     self.dialog = EvaDialog(self)
-    #     self.dialog.exec()
-    #
-    # def log(self, message: str):
-    #     """Метод для логирования в одно место."""
-    #     self.ui.log_output.appendPlainText(message)
+        self.template_repository.update(
+            record_id,
+            folder_id,
+            template_name,
+        )
+
+        self.load_template_database_table()
+
+    def on_delete_templates(
+            self,
+            record_ids: list[int],
+    ):
+        if not record_ids:
+            return
+
+        answer = QMessageBox.question(
+            self,
+            "Delete templates",
+            f"Delete {len(record_ids)} selected records?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+
+        if answer != QMessageBox.Yes:
+            return
+
+        self.template_repository.delete_by_ids(
+            record_ids
+        )
+
+        self.load_template_database_table()

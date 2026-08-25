@@ -15,6 +15,7 @@ class Database:
 
     def initialize(self):
         with self.connect() as connection:
+            # Copy rules
             connection.execute("""
                 CREATE TABLE IF NOT EXISTS copy_rules (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -25,6 +26,7 @@ class Database:
                 )
             """)
 
+            # Initial 5D rule
             connection.execute(
                 """
                 INSERT OR IGNORE INTO copy_rules (
@@ -36,3 +38,22 @@ class Database:
                 """,
                 ("5D", "8", "7"),
             )
+
+            # Template catalog
+            connection.execute("""
+                CREATE TABLE IF NOT EXISTS template_catalog (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    folder_id INTEGER NOT NULL,
+                    template_name TEXT NOT NULL,
+                    UNIQUE(folder_id, template_name)
+                )
+            """)
+
+            # Stopper catalog
+            connection.execute("""
+                CREATE TABLE IF NOT EXISTS stopper_catalog (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    stopper_name TEXT NOT NULL UNIQUE,
+                    diameter REAL NOT NULL
+                )
+            """)
