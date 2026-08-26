@@ -1,6 +1,6 @@
 # widgets/database_table.py
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QRect
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -10,7 +10,9 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
     QLabel,
     QAbstractItemView,
+    QHeaderView, QCheckBox
 )
+
 
 
 class DatabaseTableWidget(QWidget):
@@ -50,8 +52,14 @@ class DatabaseTableWidget(QWidget):
 
         # Table
         self.table = QTableWidget()
-        self.table.setColumnCount(len(self.headers) + 1)
 
+        self.header = CheckBoxHeader(
+            Qt.Horizontal,
+            self.table,
+        )
+        self.table.setHorizontalHeader(self.header)
+
+        self.table.setColumnCount(len(self.headers) + 1)
         self.table.setHorizontalHeaderLabels(
             [""] + self.headers
         )
@@ -93,6 +101,10 @@ class DatabaseTableWidget(QWidget):
 
         self.table.itemChanged.connect(
             self._update_status
+        )
+
+        self.header.checkStateChanged.connect(
+            self._set_all_checked
         )
 
     def render_records(self, records: list[dict]):
@@ -168,22 +180,13 @@ class DatabaseTableWidget(QWidget):
         return selected_ids
 
     def _on_edit_clicked(self):
-        row = self.table.currentRow()
+        record_ids = self._selected_record_ids()
 
-        if row < 0:
+        if len(record_ids) != 1:
             return
-
-        item = self.table.item(row, 0)
-
-        if item is None:
-            return
-
-        record_id = item.data(
-            Qt.UserRole
-        )
 
         self.editRequested.emit(
-            record_id
+            record_ids[0]
         )
 
     def _on_delete_clicked(self):
@@ -203,6 +206,10 @@ class DatabaseTableWidget(QWidget):
             self._selected_record_ids()
         )
 
+        self.editButton.setEnabled(
+            selected_count == 1
+        )
+
         total_count = self.table.rowCount()
 
         self.selectedLabel.setText(
@@ -212,3 +219,106 @@ class DatabaseTableWidget(QWidget):
         self.recordsLabel.setText(
             f"{total_count} records"
         )
+
+        if total_count == 0:
+            state = Qt.Unchecked
+
+        elif selected_count == 0:
+            state = Qt.Unchecked
+
+        elif selected_count == total_count:
+            state = Qt.Checked
+
+        else:
+            state = Qt.PartiallyChecked
+
+        self.header.set_check_state(
+            state
+        )
+
+    def _set_all_checked(
+            self,
+            state: Qt.CheckState,
+    ):
+        self.table.blockSignals(True)
+
+        for row in range(self.table.rowCount()):
+            item = self.table.item(row, 0)
+
+            if item is not None:
+                item.setCheckState(state)
+
+        self.table.blockSignals(False)
+
+        self._update_status()
+
+class CheckBoxHeader(QHeaderView):
+
+    checkStateChanged = Signal(Qt.CheckState)
+
+    def __init__(self, orientation, parent=None):
+        super().__init__(orientation, parent)
+
+        self.checkbox = HeaderCheckBox(self)
+        self.checkbox.setTristate(True)
+
+        self.checkbox.stateChanged.connect(
+            self._on_state_changed
+        )
+
+        self.sectionResized.connect(
+            self._update_checkbox_position
+        )
+
+        self.sectionMoved.connect(
+            self._update_checkbox_position
+        )
+
+    def _on_state_changed(self, state):
+        self.checkStateChanged.emit(
+            Qt.CheckState(state)
+        )
+
+    def set_check_state(
+            self,
+            state: Qt.CheckState,
+    ):
+        self.checkbox.blockSignals(True)
+
+        self.checkbox.setCheckState(
+            state
+        )
+
+        self.checkbox.blockSignals(False)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._update_checkbox_position()
+
+    def _update_checkbox_position(self):
+        section_x = self.sectionViewportPosition(0)
+        section_width = self.sectionSize(0)
+
+        checkbox_size = self.checkbox.sizeHint()
+
+        x = (
+            section_x
+            + (section_width - checkbox_size.width()) // 2
+        )
+
+        y = (
+            (self.height() - checkbox_size.height()) // 2
+        )
+
+        self.checkbox.move(
+            x,
+            y,
+        )
+
+class HeaderCheckBox(QCheckBox):
+
+    def nextCheckState(self):
+        if self.checkState() == Qt.Checked:
+            self.setCheckState(Qt.Unchecked)
+        else:
+            self.setCheckState(Qt.Checked)

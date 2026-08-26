@@ -9,13 +9,16 @@ from PySide6.QtCore import Qt, QTimer, QThread
 import pathlib
 from pathlib import Path
 
+from database.repositories.stopper_repository import StopperRepository
 from database.repositories.template_repository import TemplateRepository
 from models.results import RenameFileResult
 from services.art_copy_planner import ArtCopyPlanner
 from services.art_copy_service import ArtCopyService
 from services.art_copy_validator import ArtCopyValidator
+from services.stopper_service import StopperService
 from services.template_service import TemplateService
 from ui.dialogs.template_dialog import TemplateDialog
+from ui.dialogs.stopper_dialog import StopperDialog
 from ui.pages.copy_art_page import CopyArtsPage
 from ui.pages.database_page import DatabasePage
 from ui.pages.eva_page import EvaPage
@@ -121,6 +124,8 @@ class MainWindow(QMainWindow):
         self.copy_rule_service = CopyRuleService(self.copy_rule_repository)
         self.template_repository = TemplateRepository(self.database)
         self.template_service = TemplateService(self.template_repository)
+        self.stopper_repository = StopperRepository(self.database)
+        self.stopper_service = StopperService(self.stopper_repository)
 
         self.database_page = DatabasePage()
         self.ui.stacked_widget.addWidget(self.database_page)
@@ -162,6 +167,15 @@ class MainWindow(QMainWindow):
         )
         self.database_page.templatesTable.deleteRequested.connect(
             self.on_delete_templates
+        )
+        self.database_page.stoppersTable.addRequested.connect(
+            self.on_add_stopper
+        )
+        self.database_page.stoppersTable.editRequested.connect(
+            self.on_edit_stopper
+        )
+        self.database_page.stoppersTable.deleteRequested.connect(
+            self.on_delete_stoppers
         )
 
 
@@ -673,3 +687,92 @@ class MainWindow(QMainWindow):
         )
 
         self.load_template_database_table()
+
+
+    def load_stopper_database_table(self):
+        records = (
+            self.stopper_repository.get_all()
+        )
+
+        table_records = []
+
+        for record in records:
+            table_records.append(
+                {
+                    "id": record.id,
+                    "values": {
+                        "diameter": record.diameter,
+                        "stopper_name": record.stopper_name,
+                    },
+                }
+            )
+
+        self.database_page.stoppersTable.render_records(
+            table_records
+        )
+
+    def on_add_stopper(self):
+        dialog = StopperDialog(parent=self)
+
+        if dialog.exec() != QDialog.Accepted:
+            return
+
+        diameter, stopper_name = dialog.get_data()
+
+        self.stopper_repository.add(
+            diameter,
+            stopper_name,
+        )
+
+        self.load_stopper_database_table()
+
+    def on_edit_stopper(self, record_id: int):
+        record = self.stopper_repository.get_by_id(
+            record_id
+        )
+
+        if record is None:
+            return
+
+        dialog = StopperDialog(
+            diameter=record.diameter,
+            stopper_name=record.stopper_name,
+            parent=self,
+        )
+
+        if dialog.exec() != QDialog.Accepted:
+            return
+
+        diameter, stopper_name = dialog.get_data()
+
+        self.stopper_repository.update(
+            record_id,
+            diameter,
+            stopper_name,
+        )
+
+        self.load_stopper_database_table()
+
+    def on_delete_stoppers(
+            self,
+            record_ids: list[int],
+    ):
+        if not record_ids:
+            return
+
+        answer = QMessageBox.question(
+            self,
+            "Delete stoppers",
+            f"Delete {len(record_ids)} selected records?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+
+        if answer != QMessageBox.Yes:
+            return
+
+        self.stopper_repository.delete_by_ids(
+            record_ids
+        )
+
+        self.load_stopper_database_table()
