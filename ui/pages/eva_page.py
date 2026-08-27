@@ -27,7 +27,7 @@ class EvaPage(QWidget):
         self.setup_eva_group()
         self.setup_prepared_eva_group()
         self.setup_stoppers_button()
-        self.setup_log_group()
+        self.setup_templates_group()
 
         self.layout.addStretch()
 
@@ -79,10 +79,15 @@ class EvaPage(QWidget):
 
     # ---------- Logs / Templates ----------
 
-    def setup_log_group(self):
-        self.log_group = QGroupBox("Типы шаблонов")
-        self.log_layout = QVBoxLayout(self.log_group)
-        self.layout.addWidget(self.log_group)
+    def setup_templates_group(self):
+        self.templates_group = QGroupBox("Типы шаблонов")
+        self.templates_layout = QVBoxLayout(
+            self.templates_group
+        )
+
+        self.layout.addWidget(
+            self.templates_group
+        )
 
     # ---------- Connections ----------
 
@@ -98,3 +103,27 @@ class EvaPage(QWidget):
         articles = [a.strip() for a in articles_text.split(",") if a.strip()]
 
         self.addEvaRequested.emit(name, articles)
+
+    def render_templates(
+            self,
+            templates: dict[int, list[str]],
+    ):
+        self.clear_templates()
+
+        for folder_id, template_names in templates.items():
+            group = QGroupBox(f"ID {folder_id}")
+            group_layout = QVBoxLayout(group)
+
+            for template_name in template_names:
+                label = QLabel(template_name)
+                group_layout.addWidget(label)
+
+            self.templates_layout.addWidget(group)
+
+    def clear_templates(self):
+        while self.templates_layout.count():
+            item = self.templates_layout.takeAt(0)
+            widget = item.widget()
+
+            if widget is not None:
+                widget.deleteLater()

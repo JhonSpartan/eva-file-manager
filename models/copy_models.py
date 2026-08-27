@@ -105,6 +105,7 @@ class FileCopyOperation:
 
 @dataclass(frozen=True)
 class CopyRule:
+    id: int
     mode: str
     from_id: str
     to_id: str

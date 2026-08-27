@@ -17,6 +17,7 @@ from services.art_copy_service import ArtCopyService
 from services.art_copy_validator import ArtCopyValidator
 from services.stopper_service import StopperService
 from services.template_service import TemplateService
+from ui.dialogs.copy_rule_dialog import CopyRuleDialog
 from ui.dialogs.template_dialog import TemplateDialog
 from ui.dialogs.stopper_dialog import StopperDialog
 from ui.pages.copy_art_page import CopyArtsPage
@@ -102,9 +103,6 @@ class MainWindow(QMainWindow):
         self.eva_page = EvaPage()
         self.ui.stacked_widget.addWidget(self.eva_page)
 
-        self.database_page = DatabasePage()
-        self.ui.stacked_widget.addWidget(self.database_page)
-
         self.files_to_rename: list[Path] = []
 
         self.files_for_replace: list[Path] = []
@@ -130,12 +128,16 @@ class MainWindow(QMainWindow):
         self.database_page = DatabasePage()
         self.ui.stacked_widget.addWidget(self.database_page)
         self.load_template_database_table()
+        self.load_stopper_database_table()
+        self.load_copy_rules_database_table()
 
         self.art_copy_validator = ArtCopyValidator(self.copy_rule_service)
         self.art_copy_planner = ArtCopyPlanner(self.copy_rule_service)
 
         self.art_service = ArtService()
         self.art_copy_service = ArtCopyService()
+
+        self.load_templates_to_eva_page()
 
 
         self.edit_page.loadFilesRequested.connect(
@@ -176,6 +178,17 @@ class MainWindow(QMainWindow):
         )
         self.database_page.stoppersTable.deleteRequested.connect(
             self.on_delete_stoppers
+        )
+        self.database_page.copyRulesTable.addRequested.connect(
+            self.on_add_copy_rule
+        )
+
+        self.database_page.copyRulesTable.editRequested.connect(
+            self.on_edit_copy_rule
+        )
+
+        self.database_page.copyRulesTable.deleteRequested.connect(
+            self.on_delete_copy_rules
         )
 
 
@@ -776,3 +789,107 @@ class MainWindow(QMainWindow):
         )
 
         self.load_stopper_database_table()
+
+    def load_copy_rules_database_table(self):
+        records = (
+            self.copy_rule_repository.get_all()
+        )
+
+        table_records = []
+
+        for record in records:
+            table_records.append(
+                {
+                    "id": record.id,
+                    "values": {
+                        "mode": record.mode,
+                        "from_id": record.from_id,
+                        "to_id": record.to_id,
+                    },
+                }
+            )
+
+        self.database_page.copyRulesTable.render_records(
+            table_records
+        )
+
+    def on_add_copy_rule(self):
+        dialog = CopyRuleDialog(parent=self)
+
+        if dialog.exec() != QDialog.Accepted:
+            return
+
+        mode, from_id, to_id = dialog.get_data()
+
+        self.copy_rule_repository.add(
+            mode,
+            from_id,
+            to_id,
+        )
+
+        self.load_copy_rules_database_table()
+
+    def on_edit_copy_rule(
+            self,
+            record_id: int,
+    ):
+        record = self.copy_rule_repository.get_by_id(
+            record_id
+        )
+
+        if record is None:
+            return
+
+        dialog = CopyRuleDialog(
+            mode=record.mode,
+            from_id=record.from_id,
+            to_id=record.to_id,
+            parent=self,
+        )
+
+        if dialog.exec() != QDialog.Accepted:
+            return
+
+        mode, from_id, to_id = dialog.get_data()
+
+        self.copy_rule_repository.update(
+            record_id,
+            mode,
+            from_id,
+            to_id,
+        )
+
+        self.load_copy_rules_database_table()
+
+    def on_delete_copy_rules(
+            self,
+            record_ids: list[int],
+    ):
+        if not record_ids:
+            return
+
+        answer = QMessageBox.question(
+            self,
+            "Delete copy rules",
+            f"Delete {len(record_ids)} selected records?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+
+        if answer != QMessageBox.Yes:
+            return
+
+        self.copy_rule_repository.delete_by_ids(
+            record_ids
+        )
+
+        self.load_copy_rules_database_table()
+
+    def load_templates_to_eva_page(self):
+        templates = (
+            self.template_service.get_grouped_templates()
+        )
+
+        self.eva_page.render_templates(
+            templates
+        )

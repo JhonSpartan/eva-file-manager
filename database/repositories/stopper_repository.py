@@ -29,9 +29,9 @@ class StopperRepository:
             for row in rows
         ]
 
-    def get_by_folder_id(
+    def get_by_diameter(
             self,
-            folder_id: int,
+            diameter: float,
     ) -> list[StopperRecord]:
         with self.database.connect() as connection:
             rows = connection.execute(
@@ -41,7 +41,7 @@ class StopperRepository:
                 WHERE diameter = ?
                 ORDER BY stopper_name
                 """,
-                (folder_id,),
+                (diameter,),
             ).fetchall()
 
         return [
@@ -55,7 +55,7 @@ class StopperRepository:
 
     def add(
             self,
-            diameter: int,
+            diameter: float,
             stopper_name: str,
     ):
         with self.database.connect() as connection:
@@ -117,7 +117,7 @@ class StopperRepository:
     def update(
             self,
             record_id: int,
-            diameter: int,
+            diameter: float,
             stopper_name: str,
     ):
         with self.database.connect() as connection:
