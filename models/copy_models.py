@@ -2,14 +2,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from enum import Enum, auto
 
-
-
-
 class SelectionState(Enum):
     NONE = 0
     PARTIAL = 1
     FULL = 2
-
 
 @dataclass
 class ArtSelection:
@@ -70,6 +66,11 @@ class CopyValidationResult:
         return not self.blocking_issues
 
 @dataclass
+class FileCopyOperation:
+    source_file: Path
+    destination_id: Path
+
+@dataclass
 class DestinationCopyPlan:
     destination_art: Path
     ids_to_create: list[str] = field(default_factory=list)
@@ -96,11 +97,6 @@ class CopyPlan:
                 return False
 
         return True
-
-@dataclass
-class FileCopyOperation:
-    source_file: Path
-    destination_id: Path
 
 
 @dataclass(frozen=True)

@@ -161,6 +161,12 @@ class MainWindow(QMainWindow):
         self.copy_page.copyAndRenameRequested.connect(
             self.start_copy_art
         )
+        self.eva_page.addEvaRequested.connect(
+            self.add_prepared_eva
+        )
+        self.eva_page.clearPreparedEvaRequested.connect(
+            self.clear_prepared_eva
+        )
         self.database_page.templatesTable.addRequested.connect(
             self.on_add_template
         )
@@ -182,14 +188,13 @@ class MainWindow(QMainWindow):
         self.database_page.copyRulesTable.addRequested.connect(
             self.on_add_copy_rule
         )
-
         self.database_page.copyRulesTable.editRequested.connect(
             self.on_edit_copy_rule
         )
-
         self.database_page.copyRulesTable.deleteRequested.connect(
             self.on_delete_copy_rules
         )
+
 
 
     def setup_connections(self):
@@ -893,3 +898,28 @@ class MainWindow(QMainWindow):
         self.eva_page.render_templates(
             templates
         )
+
+    def add_prepared_eva(
+            self,
+            eva_name: str,
+            articles: list[str],
+    ):
+        articles_text = ", ".join(articles)
+
+        label = QLabel(
+            f"{eva_name} ({articles_text})"
+        )
+
+        self.eva_page.prepared_eva_layout.insertWidget(
+            self.eva_page.prepared_eva_layout.count() - 1,
+            label,
+        )
+
+    def clear_prepared_eva(self):
+        while self.eva_page.prepared_eva_layout.count() > 1:
+            item = self.eva_page.prepared_eva_layout.takeAt(0)
+
+            widget = item.widget()
+
+            if widget is not None:
+                widget.deleteLater()
