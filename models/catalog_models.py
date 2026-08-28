@@ -1,11 +1,12 @@
 from dataclasses import dataclass
 
 
-@dataclass(frozen=True)
+@dataclass
 class TemplateRecord:
     id: int
     folder_id: int
     template_name: str
+    has_stoppers: bool
 
 @dataclass(frozen=True)
 class StopperRecord:

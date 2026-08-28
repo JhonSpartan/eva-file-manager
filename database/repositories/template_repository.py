@@ -14,7 +14,7 @@ class TemplateRepository:
         with self.database.connect() as connection:
             rows = connection.execute(
                 """
-                SELECT id, folder_id, template_name
+                SELECT id, folder_id, template_name, has_stoppers
                 FROM template_catalog
                 ORDER BY folder_id, template_name
                 """
@@ -25,6 +25,7 @@ class TemplateRepository:
                 id=row["id"],
                 folder_id=row["folder_id"],
                 template_name=row["template_name"],
+                has_stoppers=bool(row["has_stoppers"]),
             )
             for row in rows
         ]
@@ -36,7 +37,7 @@ class TemplateRepository:
         with self.database.connect() as connection:
             rows = connection.execute(
                 """
-                SELECT id, folder_id, template_name
+                SELECT id, folder_id, template_name, has_stoppers
                 FROM template_catalog
                 WHERE folder_id = ?
                 ORDER BY template_name
@@ -49,6 +50,7 @@ class TemplateRepository:
                 id=row["id"],
                 folder_id=row["folder_id"],
                 template_name=row["template_name"],
+                has_stoppers=bool(row["has_stoppers"]),
             )
             for row in rows
         ]
@@ -57,17 +59,23 @@ class TemplateRepository:
             self,
             folder_id: int,
             template_name: str,
+            has_stoppers: bool,
     ):
         with self.database.connect() as connection:
             connection.execute(
                 """
                 INSERT OR IGNORE INTO template_catalog (
                     folder_id,
-                    template_name
+                    template_name,
+                    has_stoppers
                 )
-                VALUES (?, ?)
+                VALUES (?, ?, ?)
                 """,
-                (folder_id, template_name),
+                (
+                    folder_id,
+                    template_name,
+                    int(has_stoppers),
+                ),
             )
 
     def delete_by_ids(
@@ -98,7 +106,7 @@ class TemplateRepository:
         with self.database.connect() as connection:
             row = connection.execute(
                 """
-                SELECT id, folder_id, template_name
+                SELECT id, folder_id, template_name, has_stoppers
                 FROM template_catalog
                 WHERE id = ?
                 """,
@@ -112,6 +120,7 @@ class TemplateRepository:
             id=row["id"],
             folder_id=row["folder_id"],
             template_name=row["template_name"],
+            has_stoppers=bool(row["has_stoppers"]),
         )
 
     def update(
@@ -119,18 +128,22 @@ class TemplateRepository:
             record_id: int,
             folder_id: int,
             template_name: str,
+            has_stoppers: bool,
     ):
         with self.database.connect() as connection:
             connection.execute(
                 """
                 UPDATE template_catalog
-                SET folder_id = ?,
-                    template_name = ?
+                SET
+                    folder_id = ?,
+                    template_name = ?,
+                    has_stoppers = ?
                 WHERE id = ?
                 """,
                 (
                     folder_id,
                     template_name,
+                    int(has_stoppers),
                     record_id,
                 ),
             )

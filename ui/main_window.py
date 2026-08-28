@@ -34,6 +34,7 @@ from workers.replace_worker import ReplaceWorker
 from database.database import Database
 from database.repositories.copy_rule_repository import CopyRuleRepository
 from services.copy_rules import CopyRuleService
+from models.eva_models import PreparedEva
 
 class Ui_MainWindow:
     def setup_ui(self, MainWindow):
@@ -102,6 +103,8 @@ class MainWindow(QMainWindow):
 
         self.eva_page = EvaPage()
         self.ui.stacked_widget.addWidget(self.eva_page)
+
+        self.prepared_evas: list[PreparedEva] = []
 
         self.files_to_rename: list[Path] = []
 
@@ -632,6 +635,7 @@ class MainWindow(QMainWindow):
                     "values": {
                         "folder_id": record.folder_id,
                         "template_name": record.template_name,
+                        "has_stoppers": "Yes" if record.has_stoppers else "No"
                     },
                 }
             )
@@ -641,21 +645,30 @@ class MainWindow(QMainWindow):
         )
 
     def on_add_template(self):
-        dialog = TemplateDialog(parent=self)
+        dialog = TemplateDialog(
+            parent=self,
+        )
 
         if dialog.exec() != QDialog.Accepted:
             return
 
-        folder_id, template_name = dialog.get_data()
+        folder_id, template_name, has_stoppers = (
+            dialog.get_data()
+        )
 
         self.template_repository.add(
             folder_id,
             template_name,
+            has_stoppers,
         )
 
         self.load_template_database_table()
+        self.load_templates_to_eva_page()
 
-    def on_edit_template(self, record_id: int):
+    def on_edit_template(
+            self,
+            record_id: int,
+    ):
         record = self.template_repository.get_by_id(
             record_id
         )
@@ -666,22 +679,27 @@ class MainWindow(QMainWindow):
         dialog = TemplateDialog(
             folder_id=record.folder_id,
             template_name=record.template_name,
+            has_stoppers=record.has_stoppers,
             parent=self,
         )
 
         if dialog.exec() != QDialog.Accepted:
             return
 
-        folder_id, template_name = dialog.get_data()
+        folder_id, template_name, has_stoppers = (
+            dialog.get_data()
+        )
 
         self.template_repository.update(
             record_id,
             folder_id,
             template_name,
+            has_stoppers,
         )
 
         self.load_template_database_table()
-
+        self.load_templates_to_eva_page()
+        
     def on_delete_templates(
             self,
             record_ids: list[int],
@@ -904,10 +922,19 @@ class MainWindow(QMainWindow):
             eva_name: str,
             articles: list[str],
     ):
-        articles_text = ", ".join(articles)
+        prepared_eva = PreparedEva(
+            name=eva_name,
+            articles=articles,
+        )
+
+        self.prepared_evas.append(prepared_eva)
+
+        articles_text = ", ".join(
+            prepared_eva.articles
+        )
 
         label = QLabel(
-            f"{eva_name} ({articles_text})"
+            f"{prepared_eva.name} ({articles_text})"
         )
 
         self.eva_page.prepared_eva_layout.insertWidget(

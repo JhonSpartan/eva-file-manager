@@ -1,3 +1,5 @@
+import re
+
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QGridLayout, QGroupBox,
     QLabel, QLineEdit, QPushButton, QHBoxLayout, QTreeWidget, QCheckBox
@@ -250,9 +252,22 @@ class EvaPage(QWidget):
             self.preview_tree
         )
 
-    def on_add_clicked(self):
-        name = self.eva_name_input.text().strip()
-        articles_text = self.article_numbers_input.text().strip()
-        articles = [a.strip() for a in articles_text.split(",") if a.strip()]
+    def parse_articles(self, text: str) -> list[str]:
+        return [
+            article.lower()
+            for article in re.findall(
+                r"art-\d+",
+                text,
+                flags=re.IGNORECASE,
+            )
+        ]
 
-        self.addEvaRequested.emit(name, articles)
+    def on_add_clicked(self):
+        eva_name = self.eva_name_input.text().strip()
+
+        articles = self.parse_articles(self.article_numbers_input.text())
+
+        if not eva_name or not articles:
+            return
+
+        self.addEvaRequested.emit(eva_name, articles)

@@ -27,6 +27,7 @@ class DatabasePage(QWidget):
             [
                 "Folder ID",
                 "Template",
+                "Stoppers"
             ]
         )
 

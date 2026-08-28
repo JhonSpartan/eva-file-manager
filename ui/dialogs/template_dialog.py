@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QMessageBox,
 )
-
+from PySide6.QtWidgets import QCheckBox
 
 class TemplateDialog(QDialog):
 
@@ -17,6 +17,7 @@ class TemplateDialog(QDialog):
             self,
             folder_id: int | None = None,
             template_name: str = "",
+            has_stoppers: bool = False,
             parent=None,
     ):
         super().__init__(parent)
@@ -38,6 +39,10 @@ class TemplateDialog(QDialog):
             template_name
         )
 
+        self.has_stoppers_checkbox.setChecked(
+            has_stoppers
+        )
+
     def setup_ui(self):
         layout = QVBoxLayout(self)
 
@@ -45,6 +50,7 @@ class TemplateDialog(QDialog):
 
         self.folder_id_input = QLineEdit()
         self.template_name_input = QLineEdit()
+        self.has_stoppers_checkbox = QCheckBox("Может иметь стоперы")
 
         form_layout.addRow(
             "Folder ID:",
@@ -54,6 +60,11 @@ class TemplateDialog(QDialog):
         form_layout.addRow(
             "Template name:",
             self.template_name_input,
+        )
+
+        form_layout.addRow(
+            "",
+            self.has_stoppers_checkbox,
         )
 
         layout.addLayout(form_layout)
@@ -114,10 +125,11 @@ class TemplateDialog(QDialog):
 
         self.accept()
 
-    def get_data(self) -> tuple[int, str]:
+    def get_data(
+            self,
+    ) -> tuple[int, str, bool]:
         return (
-            int(
-                self.folder_id_input.text().strip()
-            ),
+            int(self.folder_id_input.text()),
             self.template_name_input.text().strip(),
+            self.has_stoppers_checkbox.isChecked(),
         )

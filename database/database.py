@@ -45,6 +45,7 @@ class Database:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     folder_id INTEGER NOT NULL,
                     template_name TEXT NOT NULL,
+                    has_stoppers INTEGER NOT NULL DEFAULT 0,
                     UNIQUE(folder_id, template_name)
                 )
             """)
