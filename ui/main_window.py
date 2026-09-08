@@ -30,6 +30,7 @@ from ui.dialogs.template_dialog import TemplateDialog
 from ui.dialogs.stopper_dialog import StopperDialog
 from ui.dialogs.replace_dialog import ReplaceDialog
 from ui.dialogs.export_dialog import ExportDialog
+from ui.dialogs.move_to_id_dialog import MoveToIdDialog
 from ui.pages.copy_art_page import CopyArtsPage
 from ui.pages.database_page import DatabasePage
 from ui.pages.eva_page import EvaPage
@@ -42,6 +43,8 @@ from workers.rename_worker import RenameWorker
 from workers.replace_worker import ReplaceWorker
 from workers.eva_generation_worker import EvaGenerationWorker
 from workers.export_worker import ExportWorker
+from workers.delete_worker import DeleteWorker
+from workers.move_to_id_worker import (MoveToIdWorker)
 
 
 from database.database import Database
@@ -52,6 +55,7 @@ from models.file_action_models import ReplaceMode
 from services.eva_generation_planner import (EvaGenerationPlanner)
 from services.replace_planner import ReplacePlanner
 from services.delete_planner import DeletePlanner
+from services.move_to_id_planner import MoveToIdPlanner
 
 
 class Ui_MainWindow:
@@ -156,6 +160,7 @@ class MainWindow(QMainWindow):
         self.replace_planner = ReplacePlanner()
         self.export_planner = ExportPlanner()
         self.delete_planner = DeletePlanner()
+        self.move_to_id_planner = MoveToIdPlanner()
 
         self.database_page = DatabasePage()
         self.ui.stacked_widget.addWidget(self.database_page)
@@ -184,9 +189,6 @@ class MainWindow(QMainWindow):
         self.edit_page.renameFilesRequested.connect(
             self.start_rename
         )
-        # self.edit_page.replaceCharRequested.connect(
-        #     self.start_replace
-        # )
         self.edit_page.filterRequested.connect(
             self.filter_files
         )
@@ -231,6 +233,9 @@ class MainWindow(QMainWindow):
         )
         self.database_page.editFilesDefaultPathRequested.connect(
             self.edit_files_default_output_path
+        )
+        self.edit_page.moveToIdRequested.connect(
+            self.on_move_to_id_requested
         )
 
         self.database_page.openFilesLastOutputRequested.connect(
@@ -1997,11 +2002,376 @@ class MainWindow(QMainWindow):
             )
             return
 
-        print("DELETE PLAN")
-        print("level:", plan.level)
-        print("operations:", len(plan.operations))
+        targets_text = "\n".join(
+            str(operation.target_path)
+            for operation in plan.operations
+        )
 
-        for operation in plan.operations:
-            print(
-                operation.target_path
+        reply = QMessageBox.warning(
+            self,
+            "Подтверждение удаления",
+            (
+                f"Будет удалено объектов: "
+                f"{len(plan.operations)}\n\n"
+                f"{targets_text}\n\n"
+                "Это действие нельзя отменить.\n"
+                "Продолжить?"
+            ),
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+
+        if reply != QMessageBox.Yes:
+            return
+
+        self.current_delete_plan = plan
+
+        self.edit_page.editFilesPbar.setValue(0)
+
+        self.set_processing_state(True)
+
+        self.delete_thread = QThread()
+
+        self.delete_worker = DeleteWorker(
+            plan
+        )
+
+        self.delete_worker.moveToThread(
+            self.delete_thread
+        )
+
+        self.delete_thread.started.connect(
+            self.delete_worker.run
+        )
+
+        self.delete_worker.progress.connect(
+            self.on_delete_progress
+        )
+
+        self.delete_worker.finished.connect(
+            self.on_delete_finished
+        )
+
+        self.delete_worker.errorOccurred.connect(
+            self.on_delete_error
+        )
+
+        self.delete_worker.finished.connect(
+            self.delete_thread.quit
+        )
+
+        self.delete_worker.errorOccurred.connect(
+            self.delete_thread.quit
+        )
+
+        self.delete_worker.finished.connect(
+            self.delete_worker.deleteLater
+        )
+
+        self.delete_worker.errorOccurred.connect(
+            self.delete_worker.deleteLater
+        )
+
+        self.delete_thread.finished.connect(
+            self.delete_thread.deleteLater
+        )
+
+        self.delete_thread.start()
+
+    def on_delete_progress(
+            self,
+            current: int,
+            total: int,
+            operation,
+    ) -> None:
+
+        self.edit_page.editFilesPbar.setMaximum(
+            total
+        )
+
+        self.edit_page.editFilesPbar.setValue(
+            current
+        )
+
+    def on_delete_finished(
+            self,
+            processed_count: int,
+    ) -> None:
+
+        self.refresh_edit_files_after_delete()
+
+        self.set_processing_state(False)
+
+        QMessageBox.information(
+            self,
+            "Delete complete",
+            (
+                "Удаление завершено.\n\n"
+                f"Удалено объектов: "
+                f"{processed_count}"
+            ),
+        )
+
+    def on_delete_error(
+            self,
+            message: str,
+    ) -> None:
+
+        self.set_processing_state(False)
+
+        QMessageBox.critical(
+            self,
+            "Delete error",
+            message,
+        )
+
+    def remove_missing_files_from_list(
+            self,
+            file_list,
+    ) -> None:
+
+        for row in range(
+                file_list.count() - 1,
+                -1,
+                -1,
+        ):
+            item = file_list.item(row)
+
+            file_path = item.data(
+                Qt.UserRole
             )
+
+            if file_path is None:
+                continue
+
+            if file_path.exists():
+                continue
+
+            file_list.takeItem(row)
+
+    def refresh_edit_files_after_delete(
+            self,
+    ) -> None:
+
+        self.remove_missing_files_from_list(
+            self.edit_page.files_to_rename_list
+        )
+
+        self.remove_missing_files_from_list(
+            self.edit_page.renamed_files_list
+        )
+
+        self.sync_files_to_rename_from_ui()
+
+    def on_move_to_id_requested(
+            self,
+    ) -> None:
+
+        files = self.get_visible_working_files()
+
+        if not files:
+            QMessageBox.information(
+                self,
+                "Nothing to move",
+                "Нет файлов для перемещения.",
+            )
+            return
+
+        dialog = MoveToIdDialog(
+            parent=self
+        )
+
+        if dialog.exec() != QDialog.Accepted:
+            return
+
+        destination_id = (
+            dialog.get_destination_id()
+        )
+
+        try:
+            plan = (
+                self.move_to_id_planner
+                .build_plan(
+                    files=files,
+                    destination_id=destination_id,
+                )
+            )
+
+        except ValueError as error:
+            QMessageBox.warning(
+                self,
+                "Move to ID",
+                str(error),
+            )
+            return
+
+        if plan.conflicts:
+            conflict_names = "\n".join(
+                str(path)
+                for path in plan.conflicts
+            )
+
+            QMessageBox.warning(
+                self,
+                "Move conflict",
+                (
+                    "Некоторые целевые файлы "
+                    "уже существуют:\n\n"
+                    f"{conflict_names}\n\n"
+                    "Операция отменена."
+                ),
+            )
+            return
+
+        if plan.is_empty:
+            QMessageBox.information(
+                self,
+                "Nothing to move",
+                (
+                    "Нет файлов для перемещения.\n"
+                    "Возможно, они уже находятся "
+                    f"в ID {destination_id}."
+                ),
+            )
+            return
+
+        self.current_move_to_id_plan = plan
+
+        self.current_move_to_id_plan = plan
+
+        self.edit_page.editFilesPbar.setValue(0)
+
+        self.set_processing_state(True)
+
+        self.move_to_id_thread = QThread()
+
+        self.move_to_id_worker = MoveToIdWorker(
+            plan
+        )
+
+        self.move_to_id_worker.moveToThread(
+            self.move_to_id_thread
+        )
+
+        self.move_to_id_thread.started.connect(
+            self.move_to_id_worker.run
+        )
+
+        self.move_to_id_worker.progress.connect(
+            self.on_move_to_id_progress
+        )
+
+        self.move_to_id_worker.finished.connect(
+            self.on_move_to_id_finished
+        )
+
+        self.move_to_id_worker.errorOccurred.connect(
+            self.on_move_to_id_error
+        )
+
+        self.move_to_id_worker.finished.connect(
+            self.move_to_id_thread.quit
+        )
+
+        self.move_to_id_worker.errorOccurred.connect(
+            self.move_to_id_thread.quit
+        )
+
+        self.move_to_id_worker.finished.connect(
+            self.move_to_id_worker.deleteLater
+        )
+
+        self.move_to_id_worker.errorOccurred.connect(
+            self.move_to_id_worker.deleteLater
+        )
+
+        self.move_to_id_thread.finished.connect(
+            self.move_to_id_thread.deleteLater
+        )
+
+        self.move_to_id_thread.start()
+
+    def on_move_to_id_progress(
+            self,
+            current: int,
+            total: int,
+            operation,
+    ) -> None:
+
+        self.edit_page.editFilesPbar.setMaximum(
+            total
+        )
+
+        self.edit_page.editFilesPbar.setValue(
+            current
+        )
+
+        self.update_moved_file_in_list(
+            self.edit_page.files_to_rename_list,
+            operation,
+        )
+
+        self.update_moved_file_in_list(
+            self.edit_page.renamed_files_list,
+            operation,
+        )
+
+    def on_move_to_id_error(
+            self,
+            message: str,
+    ) -> None:
+
+        self.set_processing_state(False)
+
+        QMessageBox.critical(
+            self,
+            "Move error",
+            message,
+        )
+
+    def update_moved_file_in_list(
+            self,
+            file_list,
+            operation,
+    ) -> None:
+
+        for row in range(
+                file_list.count()
+        ):
+            item = file_list.item(row)
+
+            if (
+                    item.data(Qt.UserRole)
+                    != operation.source_file
+            ):
+                continue
+
+            item.setText(
+                operation.destination_file.name
+            )
+
+            item.setData(
+                Qt.UserRole,
+                operation.destination_file,
+            )
+
+            return
+
+    def on_move_to_id_finished(
+            self,
+            processed_count: int,
+    ) -> None:
+
+        self.sync_files_to_rename_from_ui()
+
+        self.set_processing_state(False)
+
+        QMessageBox.information(
+            self,
+            "Move complete",
+            (
+                "Перемещение завершено.\n\n"
+                f"Перемещено файлов: "
+                f"{processed_count}"
+            ),
+        )

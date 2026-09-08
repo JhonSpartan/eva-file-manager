@@ -78,3 +78,26 @@ class DeletePlan:
     def is_empty(self) -> bool:
         return not self.operations
 
+@dataclass
+class MoveFileOperation:
+    source_file: Path
+    destination_file: Path
+
+
+@dataclass
+class MoveToIdPlan:
+    destination_id: str
+    operations: list[MoveFileOperation] = field(
+        default_factory=list
+    )
+    source_id_paths: set[Path] = field(
+        default_factory=set
+    )
+    conflicts: list[Path] = field(
+        default_factory=list
+    )
+
+    @property
+    def is_empty(self) -> bool:
+        return not self.operations
+
