@@ -3,23 +3,33 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QGridLayout, QGroupBox, QLineEdit,
     QStackedWidget, QMessageBox, QFileDialog, QListWidgetItem, QTreeWidgetItem, QAbstractItemView, QDialog
 )
-from PySide6.QtGui import QFont, QIcon
-from PySide6.QtCore import Qt, QTimer, QThread
+from PySide6.QtGui import QFont, QIcon, QDesktopServices
+from PySide6.QtCore import Qt, QUrl, QThread
 
 import pathlib
 from pathlib import Path
 
+from database.repositories.path_repository import PathRepository
 from database.repositories.stopper_repository import StopperRepository
 from database.repositories.template_repository import TemplateRepository
 from models.results import RenameFileResult
 from services.art_copy_planner import ArtCopyPlanner
 from services.art_copy_service import ArtCopyService
 from services.art_copy_validator import ArtCopyValidator
+from services.eva_service import EvaService
+from services.path_service import PathService
 from services.stopper_service import StopperService
 from services.template_service import TemplateService
+from services.export_planner import ExportPlanner
 from ui.dialogs.copy_rule_dialog import CopyRuleDialog
+from ui.dialogs.custom_template_dialog import CustomTemplateDialog
+from ui.dialogs.delete_dialog import DeleteDialog
+from ui.dialogs.path_dialog import PathDialog
+from ui.dialogs.stopper_selection_dialog import StopperSelectionDialog
 from ui.dialogs.template_dialog import TemplateDialog
 from ui.dialogs.stopper_dialog import StopperDialog
+from ui.dialogs.replace_dialog import ReplaceDialog
+from ui.dialogs.export_dialog import ExportDialog
 from ui.pages.copy_art_page import CopyArtsPage
 from ui.pages.database_page import DatabasePage
 from ui.pages.eva_page import EvaPage
@@ -30,11 +40,19 @@ from services.art_service import ArtService
 from workers.art_copy_worker import ArtCopyWorker
 from workers.rename_worker import RenameWorker
 from workers.replace_worker import ReplaceWorker
+from workers.eva_generation_worker import EvaGenerationWorker
+from workers.export_worker import ExportWorker
+
 
 from database.database import Database
 from database.repositories.copy_rule_repository import CopyRuleRepository
 from services.copy_rules import CopyRuleService
-from models.eva_models import PreparedEva
+from models.eva_models import PreparedEva, PreviewTemplate
+from models.file_action_models import ReplaceMode
+from services.eva_generation_planner import (EvaGenerationPlanner)
+from services.replace_planner import ReplacePlanner
+from services.delete_planner import DeletePlanner
+
 
 class Ui_MainWindow:
     def setup_ui(self, MainWindow):
@@ -104,6 +122,8 @@ class MainWindow(QMainWindow):
         self.eva_page = EvaPage()
         self.ui.stacked_widget.addWidget(self.eva_page)
 
+        self.five_d_mode = False
+
         self.prepared_evas: list[PreparedEva] = []
 
         self.files_to_rename: list[Path] = []
@@ -111,6 +131,8 @@ class MainWindow(QMainWindow):
         self.files_for_replace: list[Path] = []
 
         self.file_service = FileService()
+
+        self.eva_service = EvaService()
 
         db_path = Path.home() / ".eva" / "eva.db"
         db_path.parent.mkdir(
@@ -125,8 +147,15 @@ class MainWindow(QMainWindow):
         self.copy_rule_service = CopyRuleService(self.copy_rule_repository)
         self.template_repository = TemplateRepository(self.database)
         self.template_service = TemplateService(self.template_repository)
+        self.session_templates = (self.template_service.get_session_templates())
         self.stopper_repository = StopperRepository(self.database)
         self.stopper_service = StopperService(self.stopper_repository)
+        self.path_repository = PathRepository(self.database)
+        self.path_service = PathService(self.path_repository)
+        self.eva_generation_planner = (EvaGenerationPlanner(self.copy_rule_service))
+        self.replace_planner = ReplacePlanner()
+        self.export_planner = ExportPlanner()
+        self.delete_planner = DeletePlanner()
 
         self.database_page = DatabasePage()
         self.ui.stacked_widget.addWidget(self.database_page)
@@ -142,6 +171,12 @@ class MainWindow(QMainWindow):
 
         self.load_templates_to_eva_page()
 
+        self.refresh_eva_paths()
+        self.refresh_files_paths()
+
+        last_output_path = (self.path_service.get_eva_last_output_path())
+
+        self.eva_page.open_last_output_btn.setEnabled(last_output_path is not None and last_output_path.exists())
 
         self.edit_page.loadFilesRequested.connect(
             self.on_load_files_requested
@@ -149,9 +184,9 @@ class MainWindow(QMainWindow):
         self.edit_page.renameFilesRequested.connect(
             self.start_rename
         )
-        self.edit_page.replaceCharRequested.connect(
-            self.start_replace
-        )
+        # self.edit_page.replaceCharRequested.connect(
+        #     self.start_replace
+        # )
         self.edit_page.filterRequested.connect(
             self.filter_files
         )
@@ -170,6 +205,56 @@ class MainWindow(QMainWindow):
         self.eva_page.clearPreparedEvaRequested.connect(
             self.clear_prepared_eva
         )
+        self.eva_page.addStoppersRequested.connect(
+            self.on_add_stoppers_requested
+        )
+        self.eva_page.customTemplateRequested.connect(
+            self.on_custom_template_requested
+        )
+        self.eva_page.templateSelectionChanged.connect(
+            self.on_template_selection_changed
+        )
+        self.eva_page.clearTemplateSelectionRequested.connect(
+            self.on_clear_template_selection
+        )
+        self.eva_page.fiveDModeChanged.connect(
+            self.on_five_d_mode_changed
+        )
+        self.eva_page.createStructureRequested.connect(
+            self.on_create_structure_requested
+        )
+        self.database_page.editEvaDefaultPathRequested.connect(
+            self.edit_eva_default_output_path
+        )
+        self.eva_page.openLastOutputRequested.connect(
+            self.open_eva_last_output
+        )
+        self.database_page.editFilesDefaultPathRequested.connect(
+            self.edit_files_default_output_path
+        )
+
+        self.database_page.openFilesLastOutputRequested.connect(
+            self.open_files_last_output
+        )
+        self.database_page.openEvaLastOutputRequested.connect(
+            self.open_eva_last_output
+        )
+        self.edit_page.replaceRequested.connect(
+            self.on_replace_requested
+        )
+        self.edit_page.returnProcessedRequested.connect(
+            self.return_processed_files
+        )
+        self.edit_page.copySourceRequested.connect(
+            self.on_export_source_requested
+        )
+        self.edit_page.copyProcessedRequested.connect(
+            self.on_export_processed_requested
+        )
+        self.edit_page.deleteSourceRequested.connect(
+            self.on_delete_source_requested
+        )
+
         self.database_page.templatesTable.addRequested.connect(
             self.on_add_template
         )
@@ -277,27 +362,9 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", str(e))
             return
 
-        # self.copy_page.srcArtsTree.clear_tree()
-        # self.copy_page.dstArtsTree.clear_tree()
         self.copy_page.copyAndRenamePbar.setValue(0)
 
         self.copy_page.artsTree.load_arts(art_paths)
-
-        # self.copy_page.artsTree.clear()
-
-        # рендерим
-        # self.render_arts(art_paths)
-
-    # def render_arts(self, art_paths: list[Path]):
-    #     self.copy_page.artsTree.clear_tree()
-    #
-    #     for art_path in art_paths:
-    #         self.copy_page.artsTree.add_art(art_path)
-    #         art_name = art_path.name
-    #
-    #         root_item = QTreeWidgetItem([art_name])
-    #         root_item.setData(0, Qt.UserRole, art_path)  # ПОЛНЫЙ ПУТЬ
-    #         self.copy_page.artsTree.addTopLevelItem(root_item)
 
     def set_processing_state(self, processing: bool):
         self.edit_page.load_files_btn.setEnabled(not processing)
@@ -373,6 +440,248 @@ class MainWindow(QMainWindow):
             else:
                 left_list.setRowHidden(row, False)
 
+    def on_replace_requested(
+            self,
+            find_text: str,
+    ) -> None:
+
+        dialog = ReplaceDialog(
+            find_text=find_text,
+            parent=self,
+        )
+
+        if dialog.exec() != QDialog.Accepted:
+            return
+
+        replace_text = dialog.get_replace_text()
+
+        mode = (
+            ReplaceMode.CREATE_COPY
+            if dialog.create_new_files()
+            else ReplaceMode.MODIFY_EXISTING
+        )
+
+        files = []
+
+        left_list = (
+            self.edit_page.files_to_rename_list
+        )
+
+        for row in range(left_list.count()):
+            if left_list.isRowHidden(row):
+                continue
+
+            item = left_list.item(row)
+            file_path = item.data(Qt.UserRole)
+
+            files.append(file_path)
+
+        plan = self.replace_planner.build_plan(
+            files=files,
+            find_text=find_text,
+            replace_text=replace_text,
+            mode=mode,
+        )
+
+        if plan.conflicts:
+            conflict_names = "\n".join(
+                path.name
+                for path in plan.conflicts
+            )
+
+            QMessageBox.warning(
+                self,
+                "Replace conflict",
+                (
+                    "Некоторые целевые файлы уже существуют:\n\n"
+                    f"{conflict_names}\n\n"
+                    "Операция отменена."
+                ),
+            )
+            return
+
+        if plan.is_empty:
+            QMessageBox.information(
+                self,
+                "Nothing to do",
+                "Нет файлов для обработки.",
+            )
+            return
+
+        self.current_replace_plan = plan
+
+        self.set_processing_state(True)
+
+        self.replace_thread = QThread()
+
+        self.replace_worker = ReplaceWorker(
+            plan
+        )
+
+        self.replace_worker.moveToThread(
+            self.replace_thread
+        )
+
+        self.replace_thread.started.connect(
+            self.replace_worker.run
+        )
+
+        self.replace_worker.progress.connect(
+            self.on_replace_plan_progress
+        )
+
+        self.replace_worker.finished.connect(
+            self.on_replace_plan_finished
+        )
+
+        self.replace_worker.errorOccurred.connect(
+            self.on_replace_plan_error
+        )
+
+        self.replace_worker.finished.connect(
+            self.replace_thread.quit
+        )
+
+        self.replace_worker.errorOccurred.connect(
+            self.replace_thread.quit
+        )
+
+        self.replace_worker.finished.connect(
+            self.replace_worker.deleteLater
+        )
+
+        self.replace_worker.errorOccurred.connect(
+            self.replace_worker.deleteLater
+        )
+
+        self.replace_thread.finished.connect(
+            self.replace_thread.deleteLater
+        )
+
+        self.replace_thread.start()
+
+    def on_replace_plan_progress(
+            self,
+            current: int,
+            total: int,
+            operation,
+    ) -> None:
+
+        self.edit_page.editFilesPbar.setMaximum(
+            total
+        )
+
+        self.edit_page.editFilesPbar.setValue(
+            current
+        )
+
+        if self.current_replace_plan.mode == ReplaceMode.MODIFY_EXISTING:
+            self.move_modified_replace_file(
+                operation
+            )
+
+        elif self.current_replace_plan.mode == ReplaceMode.CREATE_COPY:
+            self.add_created_replace_file(
+                operation
+            )
+
+    def move_modified_replace_file(
+            self,
+            operation,
+    ) -> None:
+
+        left_list = (
+            self.edit_page.files_to_rename_list
+        )
+
+        right_list = (
+            self.edit_page.renamed_files_list
+        )
+
+        for row in range(left_list.count()):
+            item = left_list.item(row)
+
+            if (
+                    item.data(Qt.UserRole)
+                    != operation.source_file
+            ):
+                continue
+
+            moved_item = left_list.takeItem(row)
+
+            moved_item.setText(
+                operation.destination_file.name
+            )
+
+            moved_item.setData(
+                Qt.UserRole,
+                operation.destination_file,
+            )
+
+            moved_item.setIcon(
+                self.check_icon
+            )
+
+            right_list.addItem(
+                moved_item
+            )
+
+            right_list.scrollToBottom()
+
+            break
+
+    def add_created_replace_file(
+            self,
+            operation,
+    ) -> None:
+
+        item = QListWidgetItem(
+            operation.destination_file.name
+        )
+
+        item.setData(
+            Qt.UserRole,
+            operation.destination_file,
+        )
+
+        item.setIcon(
+            self.check_icon
+        )
+
+        self.edit_page.renamed_files_list.addItem(
+            item
+        )
+
+        self.edit_page.renamed_files_list.scrollToBottom()
+
+    def on_replace_plan_finished(
+            self,
+            processed_count: int,
+    ) -> None:
+
+        self.sync_files_to_rename_from_ui()
+
+        self.set_processing_state(False)
+
+        QMessageBox.information(
+            self,
+            "Done",
+            f"Обработано файлов: {processed_count}",
+        )
+
+    def on_replace_plan_error(
+            self,
+            message: str,
+    ) -> None:
+
+        self.set_processing_state(False)
+
+        QMessageBox.critical(
+            self,
+            "Replace error",
+            message,
+        )
+
 
     def start_replace(self, find_text: str, replace_text: str):
         self.files_for_replace.clear()
@@ -417,14 +726,27 @@ class MainWindow(QMainWindow):
 
         self.set_processing_state(False)
 
+    def sync_files_to_rename_from_ui(self) -> None:
+
+        self.files_to_rename = []
+
+        left_list = (
+            self.edit_page.files_to_rename_list
+        )
+
+        for row in range(left_list.count()):
+            item = left_list.item(row)
+
+            self.files_to_rename.append(
+                item.data(Qt.UserRole)
+            )
+
     def remove_files(self):
         self.edit_page.files_to_rename_list.clear()
         self.edit_page.renamed_files_list.clear()
         self.files_to_rename.clear()
         self.files_for_replace.clear()
         self.edit_page.editFilesPbar.setValue(0)
-        self.edit_page.find_input.clear()
-        self.edit_page.replace_input.clear()
 
     def start_copy_art(self):
         five_d_mode = self.copy_page.fiveDModeCheckbox.isChecked()
@@ -909,12 +1231,12 @@ class MainWindow(QMainWindow):
         self.load_copy_rules_database_table()
 
     def load_templates_to_eva_page(self):
-        templates = (
-            self.template_service.get_grouped_templates()
+        self.session_templates = (
+            self.template_service.get_session_templates()
         )
 
         self.eva_page.render_templates(
-            templates
+            self.session_templates
         )
 
     def add_prepared_eva(
@@ -922,31 +1244,764 @@ class MainWindow(QMainWindow):
             eva_name: str,
             articles: list[str],
     ):
-        prepared_eva = PreparedEva(
-            name=eva_name,
-            articles=articles,
+        self.eva_service.add_prepared_eva(
+            self.prepared_evas,
+            eva_name,
+            articles,
         )
 
-        self.prepared_evas.append(prepared_eva)
-
-        articles_text = ", ".join(
-            prepared_eva.articles
-        )
-
-        label = QLabel(
-            f"{prepared_eva.name} ({articles_text})"
-        )
-
-        self.eva_page.prepared_eva_layout.insertWidget(
-            self.eva_page.prepared_eva_layout.count() - 1,
-            label,
-        )
+        self.update_eva_preview()
 
     def clear_prepared_eva(self):
-        while self.eva_page.prepared_eva_layout.count() > 1:
-            item = self.eva_page.prepared_eva_layout.takeAt(0)
+        self.prepared_evas.clear()
 
-            widget = item.widget()
+        self.update_eva_preview()
 
-            if widget is not None:
-                widget.deleteLater()
+    def on_add_stoppers_requested(self):
+        stoppers = self.stopper_repository.get_all()
+
+        dialog = StopperSelectionDialog(
+            stoppers=stoppers,
+            parent=self,
+        )
+
+        if dialog.exec() != QDialog.Accepted:
+            return
+
+        combinations = dialog.get_combinations()
+
+        self.session_templates = (
+            self.template_service.add_stopper_templates(
+                self.session_templates,
+                combinations,
+            )
+        )
+
+        self.eva_page.render_templates(
+            self.session_templates
+        )
+
+    def on_custom_template_requested(
+            self,
+            folder_id: int,
+    ):
+        templates = [
+            template
+            for template in self.session_templates
+            if template.folder_id == folder_id
+        ]
+
+        dialog = CustomTemplateDialog(
+            templates,
+            parent=self,
+        )
+
+        dialog.exec()
+
+        created_templates = (
+            dialog.get_created_templates()
+        )
+
+        self.session_templates = (
+            self.template_service.add_custom_templates(
+                self.session_templates,
+                created_templates,
+            )
+        )
+
+        self.eva_page.render_templates(
+            self.session_templates
+        )
+
+    def on_template_selection_changed(
+            self,
+            folder_id: int,
+            template_name: str,
+            checked: bool,
+    ):
+        self.template_service.set_template_selected(
+            self.session_templates,
+            folder_id,
+            template_name,
+            checked,
+            five_d_mode=self.five_d_mode,
+        )
+
+        self.eva_page.render_templates(
+            self.session_templates
+        )
+
+        self.update_eva_preview()
+
+    def on_clear_template_selection(self):
+        for template in self.session_templates:
+            template.selected = False
+
+        self.eva_page.render_templates(
+            self.session_templates
+        )
+
+    def on_five_d_mode_changed(
+            self,
+            enabled: bool,
+    ):
+        self.five_d_mode = enabled
+
+        if enabled:
+            for template in self.session_templates:
+                if template.folder_id in {1, 5}:
+                    template.selected = False
+
+        self.eva_page.set_five_d_mode(
+            enabled
+        )
+
+        self.eva_page.render_templates(
+            self.session_templates
+        )
+
+        self.update_eva_preview()
+
+    def build_preview_templates(
+            self,
+    ) -> list[PreviewTemplate]:
+
+        preview_templates = []
+
+        for template in self.session_templates:
+            if not template.selected:
+                continue
+
+            destination_folder_id = (
+                self.copy_rule_service
+                .resolve_template_folder_id(
+                    template.folder_id,
+                    self.five_d_mode,
+                )
+            )
+
+            preview_templates.append(
+                PreviewTemplate(
+                    destination_folder_id=int(
+                        destination_folder_id
+                    ),
+                    template_name=template.template_name,
+                )
+            )
+
+        return preview_templates
+
+    def update_eva_preview(self):
+
+        preview_templates = (
+            self.build_preview_templates()
+        )
+
+        self.eva_page.render_preview(
+            self.prepared_evas,
+            preview_templates,
+        )
+
+    def on_create_structure_requested(self):
+        use_default_path = (
+            self.eva_page
+            .use_default_path_checkbox
+            .isChecked()
+        )
+
+        if use_default_path:
+            destination_root = (
+                self.path_service
+                .get_eva_default_output_path()
+            )
+
+            if destination_root is None:
+                QMessageBox.warning(
+                    self,
+                    "Путь не задан",
+                    "Путь по умолчанию не настроен.",
+                )
+                return
+
+        else:
+            selected_path = (
+                QFileDialog.getExistingDirectory(
+                    self,
+                    "Выберите папку для выгрузки",
+                )
+            )
+
+            if not selected_path:
+                return
+
+            destination_root = Path(
+                selected_path
+            )
+
+        generation_plan = (
+            self.eva_generation_planner
+            .build_plan(
+                destination_root=destination_root,
+                prepared_evas=self.prepared_evas,
+                session_templates=self.session_templates,
+                five_d_mode=self.five_d_mode,
+            )
+        )
+
+        if generation_plan.is_empty:
+            QMessageBox.warning(
+                self,
+                "Нет файлов",
+                "Не выбраны шаблоны для создания.",
+            )
+            return
+
+        self.current_generation_destination = (
+            destination_root
+        )
+
+        self.eva_page.reset_creation_progress()
+
+        self.generation_thread = QThread()
+
+        self.generation_worker = (
+            EvaGenerationWorker(
+                generation_plan
+            )
+        )
+
+        self.generation_worker.moveToThread(
+            self.generation_thread
+        )
+
+        self.generation_thread.started.connect(
+            self.generation_worker.run
+        )
+
+        self.generation_worker.progressChanged.connect(
+            self.eva_page.set_creation_progress
+        )
+
+        self.generation_worker.finished.connect(
+            self.on_generation_finished
+        )
+
+        self.generation_worker.errorOccurred.connect(
+            self.on_generation_error
+        )
+
+        self.generation_worker.finished.connect(
+            self.generation_thread.quit
+        )
+
+        self.generation_worker.errorOccurred.connect(
+            self.generation_thread.quit
+        )
+
+        self.generation_worker.finished.connect(
+            self.generation_worker.deleteLater
+        )
+
+        self.generation_worker.errorOccurred.connect(
+            self.generation_worker.deleteLater
+        )
+
+        self.generation_thread.finished.connect(
+            self.generation_thread.deleteLater
+        )
+
+        self.eva_page.create_structure_btn.setEnabled(
+            False
+        )
+
+        self.generation_thread.start()
+
+    def refresh_eva_paths(self):
+        default_path = (
+            self.path_service
+            .get_eva_default_output_path()
+        )
+
+        last_path = (
+            self.path_service
+            .get_eva_last_output_path()
+        )
+
+        self.database_page.set_eva_paths(
+            default_path,
+            last_path,
+        )
+
+    def edit_eva_default_output_path(self):
+        current_path = (
+            self.path_service
+            .get_eva_default_output_path()
+        )
+
+        dialog = PathDialog(
+            current_path=current_path,
+            parent=self,
+        )
+
+        if not dialog.exec():
+            return
+
+        selected_path = dialog.get_path()
+
+        if selected_path is None:
+            return
+
+        self.path_service.set_eva_default_output_path(
+            selected_path
+        )
+
+        self.refresh_eva_paths()
+
+    def on_generation_finished(
+            self,
+            created_count: int,
+            existing_count: int,
+    ):
+        self.eva_page.create_structure_btn.setEnabled(
+            True
+        )
+
+        destination_root = (
+            self.current_generation_destination
+        )
+
+        self.path_service.set_eva_last_output_path(
+            destination_root
+        )
+
+        self.refresh_eva_paths()
+
+        self.eva_page.open_last_output_btn.setEnabled(
+            destination_root.exists()
+        )
+
+        QMessageBox.information(
+            self,
+            "Готово",
+            (
+                "Структура успешно создана.\n\n"
+                f"Создано файлов: {created_count}\n"
+                f"Уже существовало: {existing_count}"
+            ),
+        )
+
+    def on_generation_error(
+            self,
+            message: str,
+    ):
+        self.eva_page.create_structure_btn.setEnabled(
+            True
+        )
+
+        QMessageBox.critical(
+            self,
+            "Ошибка",
+            message,
+        )
+
+    def open_eva_last_output(self):
+        last_output_path = (
+            self.path_service
+            .get_eva_last_output_path()
+        )
+
+        if (
+                last_output_path is None
+                or not last_output_path.exists()
+        ):
+            QMessageBox.warning(
+                self,
+                "Папка не найдена",
+                "Последняя выгрузка EVA не найдена.",
+            )
+
+            self.refresh_eva_paths()
+
+            self.eva_page.open_last_output_btn.setEnabled(
+                False
+            )
+            return
+
+        QDesktopServices.openUrl(
+            QUrl.fromLocalFile(
+                str(last_output_path)
+            )
+        )
+
+    def return_processed_files(self) -> None:
+
+        processed_list = (
+            self.edit_page.renamed_files_list
+        )
+
+        working_list = (
+            self.edit_page.files_to_rename_list
+        )
+
+        while processed_list.count() > 0:
+            item = processed_list.takeItem(0)
+
+            item.setIcon(QIcon())
+
+            working_list.addItem(item)
+
+        self.sync_files_to_rename_from_ui()
+
+    def on_export_source_requested(self) -> None:
+
+        files = self.get_visible_working_files()
+
+        self.open_export_dialog(
+            files
+        )
+
+    def get_visible_working_files(
+            self,
+    ) -> list[Path]:
+
+        files = []
+
+        file_list = (
+            self.edit_page.files_to_rename_list
+        )
+
+        for row in range(file_list.count()):
+
+            if file_list.isRowHidden(row):
+                continue
+
+            item = file_list.item(row)
+
+            files.append(
+                item.data(Qt.UserRole)
+            )
+
+        return files
+
+    def on_export_processed_requested(self) -> None:
+
+        files = self.get_processed_files()
+
+        self.open_export_dialog(
+            files
+        )
+
+    def get_processed_files(
+            self,
+    ) -> list[Path]:
+
+        files = []
+
+        file_list = (
+            self.edit_page.renamed_files_list
+        )
+
+        for row in range(file_list.count()):
+            item = file_list.item(row)
+
+            files.append(
+                item.data(Qt.UserRole)
+            )
+
+        return files
+
+    def open_export_dialog(
+            self,
+            files: list[Path],
+    ) -> None:
+
+        if not files:
+            QMessageBox.information(
+                self,
+                "Nothing to export",
+                "Нет файлов для выгрузки.",
+            )
+            return
+
+        default_path = (
+            self.path_service
+            .get_files_default_output_path()
+        )
+
+        dialog = ExportDialog(
+            default_path=default_path,
+            parent=self,
+        )
+
+        if dialog.exec() != QDialog.Accepted:
+            return
+
+        level = dialog.get_level()
+        destination_path = (
+            dialog.get_destination_path()
+        )
+
+        if destination_path is None:
+            QMessageBox.warning(
+                self,
+                "Export",
+                "Не выбран путь для выгрузки.",
+            )
+            return
+
+        plan = self.export_planner.build_plan(
+            files=files,
+            level=level,
+            destination_root=destination_path,
+        )
+
+        if plan.conflicts:
+            conflict_names = "\n".join(
+                str(path)
+                for path in plan.conflicts
+            )
+
+            QMessageBox.warning(
+                self,
+                "Export conflict",
+                (
+                    "Некоторые объекты уже существуют "
+                    "в папке выгрузки:\n\n"
+                    f"{conflict_names}\n\n"
+                    "Операция отменена."
+                ),
+            )
+
+            return
+
+        if plan.is_empty:
+            QMessageBox.information(
+                self,
+                "Nothing to export",
+                "Нет объектов для выгрузки.",
+            )
+
+            return
+
+        self.current_export_plan = plan
+
+        self.edit_page.editFilesPbar.setValue(0)
+
+        self.set_processing_state(True)
+
+        self.export_thread = QThread()
+
+        self.export_worker = ExportWorker(
+            plan
+        )
+
+        self.export_worker.moveToThread(
+            self.export_thread
+        )
+
+        self.export_thread.started.connect(
+            self.export_worker.run
+        )
+
+        self.export_worker.progress.connect(
+            self.on_export_progress
+        )
+
+        self.export_worker.finished.connect(
+            self.on_export_finished
+        )
+
+        self.export_worker.errorOccurred.connect(
+            self.on_export_error
+        )
+
+        self.export_worker.finished.connect(
+            self.export_thread.quit
+        )
+
+        self.export_worker.errorOccurred.connect(
+            self.export_thread.quit
+        )
+
+        self.export_worker.finished.connect(
+            self.export_worker.deleteLater
+        )
+
+        self.export_worker.errorOccurred.connect(
+            self.export_worker.deleteLater
+        )
+
+        self.export_thread.finished.connect(
+            self.export_thread.deleteLater
+        )
+
+        self.export_thread.start()
+
+    def on_export_progress(
+            self,
+            current: int,
+            total: int,
+            operation,
+    ) -> None:
+
+        self.edit_page.editFilesPbar.setMaximum(
+            total
+        )
+
+        self.edit_page.editFilesPbar.setValue(
+            current
+        )
+
+    def on_export_finished(
+            self,
+            processed_count: int,
+    ) -> None:
+
+        self.set_processing_state(False)
+
+        destination_root = (
+            self.current_export_plan.destination_root
+        )
+
+        self.path_service.set_files_last_output_path(
+            destination_root
+        )
+
+        self.refresh_files_paths()
+
+        QMessageBox.information(
+            self,
+            "Export complete",
+            (
+                "Выгрузка завершена.\n\n"
+                f"Обработано объектов: "
+                f"{processed_count}"
+            ),
+        )
+
+    def on_export_error(
+            self,
+            message: str,
+    ) -> None:
+
+        self.set_processing_state(False)
+
+        QMessageBox.critical(
+            self,
+            "Export error",
+            message,
+        )
+
+    def edit_files_default_output_path(self) -> None:
+
+        current_path = (
+            self.path_service
+            .get_files_default_output_path()
+        )
+
+        dialog = PathDialog(
+            current_path=current_path,
+            parent=self,
+        )
+
+        if dialog.exec() != QDialog.Accepted:
+            return
+
+        path = dialog.get_path()
+
+        if path is None:
+            return
+
+        self.path_service.set_files_default_output_path(
+            path
+        )
+
+        self.refresh_files_paths()
+
+    def refresh_files_paths(self) -> None:
+
+        default_path = (
+            self.path_service
+            .get_files_default_output_path()
+        )
+
+        last_path = (
+            self.path_service
+            .get_files_last_output_path()
+        )
+
+        self.database_page.set_files_paths(
+            default_path=default_path,
+            last_path=last_path,
+        )
+
+    def open_files_last_output(self) -> None:
+
+        last_output_path = (
+            self.path_service
+            .get_files_last_output_path()
+        )
+
+        if (
+                last_output_path is None
+                or not last_output_path.exists()
+        ):
+            QMessageBox.warning(
+                self,
+                "Папка не найдена",
+                "Последняя выгрузка файлов не найдена.",
+            )
+
+            self.refresh_files_paths()
+            return
+
+        QDesktopServices.openUrl(
+            QUrl.fromLocalFile(
+                str(last_output_path)
+            )
+        )
+
+    def on_delete_source_requested(
+            self,
+    ) -> None:
+
+        files = self.get_visible_working_files()
+
+        if not files:
+            QMessageBox.information(
+                self,
+                "Nothing to delete",
+                "Нет файлов для удаления.",
+            )
+            return
+
+        dialog = DeleteDialog(
+            parent=self
+        )
+
+        if dialog.exec() != QDialog.Accepted:
+            return
+
+        level = dialog.get_level()
+
+        plan = self.delete_planner.build_plan(
+            files=files,
+            level=level,
+        )
+
+        if plan.is_empty:
+            QMessageBox.information(
+                self,
+                "Nothing to delete",
+                "Нет объектов для удаления.",
+            )
+            return
+
+        print("DELETE PLAN")
+        print("level:", plan.level)
+        print("operations:", len(plan.operations))
+
+        for operation in plan.operations:
+            print(
+                operation.target_path
+            )

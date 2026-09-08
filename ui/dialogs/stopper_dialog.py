@@ -123,8 +123,6 @@ class StopperDialog(QDialog):
 
     def get_data(self) -> tuple[float, str]:
         return (
-            float(
-                self.diameter_input.text().strip()
-            ),
+            float(self.diameter_input.text()),
             self.stopper_name_input.text().strip(),
         )

@@ -61,13 +61,16 @@ class StopperRepository:
         with self.database.connect() as connection:
             connection.execute(
                 """
-                INSERT OR IGNORE INTO stopper_catalog (
+                INSERT INTO stopper_catalog (
                     diameter,
                     stopper_name
                 )
                 VALUES (?, ?)
                 """,
-                (diameter, stopper_name),
+                (
+                    diameter,
+                    stopper_name,
+                ),
             )
 
     def delete_by_ids(

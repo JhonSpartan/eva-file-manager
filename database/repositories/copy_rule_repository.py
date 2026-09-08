@@ -54,6 +54,31 @@ class CopyRuleRepository:
             to_id=row["to_id"],
         )
 
+    def get_destination_id(
+            self,
+            mode: str,
+            source_id: str,
+    ) -> str | None:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT to_id
+                FROM copy_rules
+                WHERE mode = ?
+                  AND from_id = ?
+                LIMIT 1
+                """,
+                (
+                    mode,
+                    source_id,
+                ),
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        return row["to_id"]
+
     def add(
             self,
             mode: str,

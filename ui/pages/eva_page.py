@@ -2,13 +2,15 @@ import re
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QGridLayout, QGroupBox,
-    QLabel, QLineEdit, QPushButton, QHBoxLayout, QTreeWidget, QCheckBox
+    QLabel, QLineEdit, QPushButton, QHBoxLayout, QTreeWidget, QCheckBox, QTreeWidgetItem, QMessageBox
 )
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Signal, Qt
 
 from ui.dialogs.eva_dialog import EvaDialog
 
-from PySide6.QtWidgets import QScrollArea
+from PySide6.QtWidgets import QScrollArea, QProgressBar
+
+from models.eva_models import (SessionTemplate, TemplateOrigin, PreviewTemplate, PreparedEva)
 
 
 class EvaPage(QWidget):
@@ -20,9 +22,19 @@ class EvaPage(QWidget):
     addEvaRequested = Signal(str, list)
     addStoppersRequested = Signal()
     clearPreparedEvaRequested = Signal()
+    customTemplateRequested = Signal(int)
+    templateSelectionChanged = Signal( int, str, bool)
+    clearTemplateSelectionRequested = Signal()
+    fiveDModeChanged = Signal(bool)
+    createStructureRequested = Signal()
+    openLastOutputRequested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
+
+        self.template_groups: dict[int, QGroupBox] = {}
+        self.five_d_mode = False
+
         self.setup_ui()
         self.setup_connections()
 
@@ -30,7 +42,6 @@ class EvaPage(QWidget):
         self.layout = QGridLayout(self)
 
         self.setup_eva_group()
-        self.setup_prepared_eva_group()
         self.setup_stoppers_button()
         self.setup_templates_group()
         self.setup_preview_group()
@@ -44,18 +55,78 @@ class EvaPage(QWidget):
         # Левая колонка
         left_layout = QVBoxLayout()
 
-        left_layout.addWidget(
-            self.prepared_eva_group,
-            1,
+        stoppers_controls_layout = QHBoxLayout()
+
+        stoppers_controls_layout.addWidget(
+            self.add_stoppers_btn
+        )
+        stoppers_controls_layout.addWidget(
+            self.clear_template_selection_btn
+        )
+        stoppers_controls_layout.addWidget(
+            self.clear_prepared_eva_btn
         )
 
-        left_layout.addWidget(
-            self.add_stoppers_btn,
+        stoppers_controls_layout.addStretch()
+
+        stoppers_controls_layout.addWidget(
+            self.use_default_path_checkbox,
+            0,
+            Qt.AlignVCenter,
+        )
+
+        stoppers_controls_layout.addWidget(
+            self.five_d_mode_checkbox,
+     0,
+            Qt.AlignVCenter,
+        )
+
+        left_layout.addLayout(
+            stoppers_controls_layout,
+            0,
         )
 
         left_layout.addWidget(
             self.templates_group,
             4,
+        )
+
+        self.create_progress_bar = QProgressBar()
+        self.create_progress_bar.setRange(0, 100)
+        self.create_progress_bar.setValue(0)
+        self.create_progress_bar.setTextVisible(True)
+
+        self.create_structure_btn = QPushButton(
+            "Создать структуру"
+        )
+        self.create_structure_btn.setMinimumHeight(40)
+
+        self.open_last_output_btn = QPushButton(
+            "Открыть выгрузку"
+        )
+
+        self.open_last_output_btn.setMinimumHeight(
+            40
+        )
+
+        creation_buttons_layout = QHBoxLayout()
+
+        creation_buttons_layout.addWidget(
+            self.create_structure_btn,
+            2,
+        )
+
+        creation_buttons_layout.addWidget(
+            self.open_last_output_btn,
+            1,
+        )
+
+        left_layout.addWidget(
+            self.create_progress_bar
+        )
+
+        left_layout.addLayout(
+            creation_buttons_layout
         )
 
         self.layout.addLayout(
@@ -92,10 +163,10 @@ class EvaPage(QWidget):
         button_layout.addStretch()
 
         self.add_btn = QPushButton("Добавить")
-        self.clear_fields_btn = QPushButton("Очистить поля")
+        self.clear_inputs_btn = QPushButton("Очистить поля")
 
         button_layout.addWidget(self.add_btn)
-        button_layout.addWidget(self.clear_fields_btn)
+        button_layout.addWidget(self.clear_inputs_btn)
 
         self.eva_layout.addLayout(button_layout, 2, 0, 1, 2)
 
@@ -104,58 +175,18 @@ class EvaPage(QWidget):
             "article_numbers": self.article_numbers_input,
         }
 
-
-    # ---------- Prepared EVA ----------
-
-    def setup_prepared_eva_group(self):
-        self.prepared_eva_group = QGroupBox(
-            "Добавленные EVA"
-        )
-
-        group_layout = QVBoxLayout(
-            self.prepared_eva_group
-        )
-
-        controls_layout = QHBoxLayout()
-        controls_layout.addStretch()
-
-        self.clear_prepared_eva_btn = QPushButton(
-            "Очистить"
-        )
-
-        controls_layout.addWidget(
-            self.clear_prepared_eva_btn
-        )
-
-        group_layout.addLayout(
-            controls_layout
-        )
-
-        self.prepared_scroll = QScrollArea()
-        self.prepared_scroll.setWidgetResizable(True)
-
-        self.prepared_container = QWidget()
-
-        self.prepared_eva_layout = QVBoxLayout(
-            self.prepared_container
-        )
-
-        self.prepared_eva_layout.addStretch()
-
-        self.prepared_scroll.setWidget(
-            self.prepared_container
-        )
-
-        group_layout.addWidget(
-            self.prepared_scroll
-        )
-
     # ---------- Stoppers ----------
 
     def setup_stoppers_button(self):
         self.add_stoppers_btn = QPushButton("Добавить стоперы")
         self.add_stoppers_btn.setMinimumHeight(35)
-
+        self.clear_template_selection_btn = QPushButton("Снять все галочки")
+        self.clear_template_selection_btn.setMinimumHeight(35)
+        self.clear_prepared_eva_btn = QPushButton("Очистить")
+        self.clear_prepared_eva_btn.setMinimumHeight(35)
+        self.five_d_mode_checkbox = QCheckBox("5D Mode")
+        self.use_default_path_checkbox = QCheckBox("Путь по умолчанию")
+        self.use_default_path_checkbox.setChecked(True)
     # ---------- Logs / Templates ----------
 
     def setup_templates_group(self):
@@ -190,18 +221,33 @@ class EvaPage(QWidget):
     # ---------- Connections ----------
 
     def setup_connections(self):
-        self.add_stoppers_btn.clicked.connect(lambda: self.addStoppersRequested.emit())
+        self.add_stoppers_btn.clicked.connect(self.addStoppersRequested.emit)
         self.add_btn.clicked.connect(self.on_add_clicked)
         self.clear_prepared_eva_btn.clicked.connect(self.clearPreparedEvaRequested.emit)
+        self.clear_template_selection_btn.clicked.connect(self.clearTemplateSelectionRequested.emit)
+        self.five_d_mode_checkbox.toggled.connect(self.fiveDModeChanged.emit)
+        self.clear_inputs_btn.clicked.connect(self.clear_inputs)
+        self.create_structure_btn.clicked.connect(self.createStructureRequested.emit)
+        self.open_last_output_btn.clicked.connect(self.openLastOutputRequested.emit)
 
     def render_templates(
             self,
-            templates: dict[int, list[str]],
+            templates: list[SessionTemplate],
     ):
         self.clear_templates()
 
-        for index, (folder_id, template_names) in enumerate(
-                templates.items()
+        self.template_groups.clear()
+
+        grouped: dict[int, list[SessionTemplate]] = {}
+
+        for template in templates:
+            grouped.setdefault(
+                template.folder_id,
+                [],
+            ).append(template)
+
+        for index, (folder_id, folder_templates) in enumerate(
+                grouped.items()
         ):
             row = index // 2
             column = index % 2
@@ -210,15 +256,86 @@ class EvaPage(QWidget):
                 f"ID {folder_id}"
             )
 
+            self.template_groups[folder_id] = group
+
+            if (
+                    self.five_d_mode
+                    and folder_id in {1, 5}
+            ):
+                group.setEnabled(False)
+
             group_layout = QVBoxLayout(group)
 
-            for template_name in template_names:
+            button_layout = QHBoxLayout()
+
+            add_custom_button = QPushButton("+")
+            add_custom_button.setFixedSize(24, 24)
+            add_custom_button.setToolTip(
+                "Добавить custom-шаблон"
+            )
+
+            button_layout.addStretch()
+            button_layout.addWidget(add_custom_button)
+
+            group_layout.addLayout(button_layout)
+
+
+            add_custom_button.clicked.connect(
+                lambda checked=False, current_folder_id=folder_id:
+                self.customTemplateRequested.emit(
+                    current_folder_id
+                )
+            )
+
+            for template in folder_templates:
+                template_layout = QHBoxLayout()
+
                 checkbox = QCheckBox(
-                    template_name
+                    template.template_name
                 )
 
-                group_layout.addWidget(
+                checkbox.setChecked(
+                    template.selected
+                )
+
+                checkbox.toggled.connect(
+                    lambda checked,
+                           folder_id=template.folder_id,
+                           template_name=template.template_name:
+                    self.templateSelectionChanged.emit(
+                        folder_id,
+                        template_name,
+                        checked,
+                    )
+                )
+
+                template_layout.addWidget(
                     checkbox
+                )
+
+                if template.origin == TemplateOrigin.STOPPER:
+                    badge = self.create_template_badge(
+                        "S",
+                        "Stopper",
+                    )
+
+                    template_layout.addWidget(
+                        badge
+                    )
+                elif template.origin == TemplateOrigin.CUSTOM:
+                    badge = self.create_template_badge(
+                        "C",
+                        "Custom",
+                    )
+
+                    template_layout.addWidget(
+                        badge
+                    )
+
+                template_layout.addStretch()
+
+                group_layout.addLayout(
+                    template_layout
                 )
 
             self.templates_layout.addWidget(
@@ -227,6 +344,33 @@ class EvaPage(QWidget):
                 column,
             )
 
+
+    def create_template_badge(
+            self,
+            text: str,
+            tooltip: str,
+    ) -> QLabel:
+        badge = QLabel(text)
+
+        badge.setToolTip(tooltip)
+        badge.setAlignment(Qt.AlignCenter)
+
+        badge.setFixedSize(
+            20,
+            20,
+        )
+
+        badge.setStyleSheet("""
+            QLabel {
+                border: 1px solid;
+                border-radius: 4px;
+                font-size: 10px;
+                font-weight: bold;
+            }
+        """)
+
+        return badge
+
     def clear_templates(self):
         while self.templates_layout.count():
             item = self.templates_layout.takeAt(0)
@@ -234,6 +378,7 @@ class EvaPage(QWidget):
 
             if widget is not None:
                 widget.deleteLater()
+
 
 
     def setup_preview_group(self):
@@ -265,9 +410,130 @@ class EvaPage(QWidget):
     def on_add_clicked(self):
         eva_name = self.eva_name_input.text().strip()
 
-        articles = self.parse_articles(self.article_numbers_input.text())
+        articles = self.parse_articles(
+            self.article_numbers_input.text()
+        )
 
-        if not eva_name or not articles:
+        if not eva_name:
+            QMessageBox.warning(
+                self,
+                "Не заполнено поле",
+                "Введите имя EVA.",
+            )
             return
 
-        self.addEvaRequested.emit(eva_name, articles)
+        if not articles:
+            QMessageBox.warning(
+                self,
+                "Не заполнено поле",
+                "Введите хотя бы один артикул.",
+            )
+            return
+
+        self.addEvaRequested.emit(
+            eva_name,
+            articles,
+        )
+
+    def set_template_group_enabled(
+            self,
+            folder_id: int,
+            enabled: bool,
+    ):
+        group = self.template_groups.get(
+            folder_id
+        )
+
+        if group is not None:
+            group.setEnabled(enabled)
+
+    def set_five_d_mode(
+            self,
+            enabled: bool,
+    ):
+        self.five_d_mode = enabled
+
+        for folder_id, group in self.template_groups.items():
+            group.setEnabled(
+                not (
+                        enabled
+                        and folder_id in {1, 5}
+                )
+            )
+
+    def render_preview(
+            self,
+            prepared_evas: list[PreparedEva],
+            preview_templates: list[PreviewTemplate],
+    ):
+
+        self.preview_tree.clear()
+
+        for prepared_eva in prepared_evas:
+            eva_item = QTreeWidgetItem(
+                [prepared_eva.name]
+            )
+
+            self.preview_tree.addTopLevelItem(
+                eva_item
+            )
+
+            for article in prepared_eva.articles:
+                article_item = QTreeWidgetItem(
+                    [article]
+                )
+
+                eva_item.addChild(
+                    article_item
+                )
+
+                grouped_templates = {}
+
+                for template in preview_templates:
+                    grouped_templates.setdefault(
+                        template.destination_folder_id,
+                        [],
+                    ).append(template)
+
+                for folder_id in sorted(
+                        grouped_templates
+                ):
+                    id_item = QTreeWidgetItem(
+                        [f"ID {folder_id}"]
+                    )
+
+                    article_item.addChild(
+                        id_item
+                    )
+
+                    for template in grouped_templates[
+                        folder_id
+                    ]:
+                        template_item = QTreeWidgetItem(
+                            [
+                                f"{template.template_name}.dxf"
+                            ]
+                        )
+
+                        id_item.addChild(
+                            template_item
+                        )
+
+        self.preview_tree.expandAll()
+
+    def clear_inputs(self):
+        self.eva_name_input.clear()
+        self.article_numbers_input.clear()
+
+        self.eva_name_input.setFocus()
+
+    def set_creation_progress(
+            self,
+            value: int,
+    ):
+        self.create_progress_bar.setValue(
+            value
+        )
+
+    def reset_creation_progress(self):
+        self.create_progress_bar.setValue(0)

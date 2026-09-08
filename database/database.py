@@ -58,3 +58,11 @@ class Database:
                     diameter REAL NOT NULL
                 )
             """)
+
+            connection.execute("""
+                CREATE TABLE IF NOT EXISTS paths (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    path_key TEXT NOT NULL UNIQUE,
+                    path_value TEXT
+                )
+            """)
