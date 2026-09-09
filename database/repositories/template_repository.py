@@ -16,6 +16,7 @@ class TemplateRepository:
                 """
                 SELECT id, folder_id, template_name, has_stoppers
                 FROM template_catalog
+                WHERE deleted_at IS NULL
                 ORDER BY folder_id, template_name
                 """
             ).fetchall()
@@ -40,6 +41,7 @@ class TemplateRepository:
                 SELECT id, folder_id, template_name, has_stoppers
                 FROM template_catalog
                 WHERE folder_id = ?
+                  AND deleted_at IS NULL
                 ORDER BY template_name
                 """,
                 (folder_id,),
@@ -109,6 +111,7 @@ class TemplateRepository:
                 SELECT id, folder_id, template_name, has_stoppers
                 FROM template_catalog
                 WHERE id = ?
+                  AND deleted_at IS NULL
                 """,
                 (record_id,),
             ).fetchone()
@@ -147,3 +150,23 @@ class TemplateRepository:
                     record_id,
                 ),
             )
+
+    def get_uuid_by_id(
+            self,
+            record_id: int,
+    ) -> str | None:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT uuid
+                FROM template_catalog
+                WHERE id = ?
+                  AND deleted_at IS NULL
+                """,
+                (record_id,),
+            ).fetchone()
+
+            if row is None:
+                return None
+
+            return row["uuid"]

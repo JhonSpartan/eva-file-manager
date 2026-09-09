@@ -44,10 +44,14 @@ from workers.replace_worker import ReplaceWorker
 from workers.eva_generation_worker import EvaGenerationWorker
 from workers.export_worker import ExportWorker
 from workers.delete_worker import DeleteWorker
-from workers.move_to_id_worker import (MoveToIdWorker)
+from workers.move_to_id_worker import MoveToIdWorker
 
 
 from database.database import Database
+from database.cloud_database import CloudDatabase
+
+from database.repositories.cloud_sync_repository import CloudSyncRepository
+from services.sync_service import SyncService
 from database.repositories.copy_rule_repository import CopyRuleRepository
 from services.copy_rules import CopyRuleService
 from models.eva_models import PreparedEva, PreviewTemplate
@@ -146,6 +150,18 @@ class MainWindow(QMainWindow):
 
         self.database = Database(db_path)
         self.database.initialize()
+
+        self.cloud_database = CloudDatabase()
+        self.cloud_database.initialize()
+
+        self.cloud_sync_repository = CloudSyncRepository(
+            self.cloud_database
+        )
+
+        self.sync_service = SyncService(
+            self.database,
+            self.cloud_sync_repository,
+        )
 
 
         self.copy_rule_repository = CopyRuleRepository(
@@ -988,24 +1004,30 @@ class MainWindow(QMainWindow):
             dialog.get_data()
         )
 
-        self.template_repository.add(
+        self.cloud_sync_repository.add_template(
             folder_id,
             template_name,
             has_stoppers,
         )
 
+        self.sync_service.sync()
+
         self.load_template_database_table()
         self.load_templates_to_eva_page()
 
-    def on_edit_template(
-            self,
-            record_id: int,
-    ):
+    def on_edit_template(self, record_id: int):
         record = self.template_repository.get_by_id(
             record_id
         )
 
         if record is None:
+            return
+
+        template_uuid = self.template_repository.get_uuid_by_id(
+            record_id
+        )
+
+        if template_uuid is None:
             return
 
         dialog = TemplateDialog(
@@ -1022,12 +1044,14 @@ class MainWindow(QMainWindow):
             dialog.get_data()
         )
 
-        self.template_repository.update(
-            record_id,
-            folder_id,
-            template_name,
-            has_stoppers,
+        self.cloud_sync_repository.update_template(
+            template_uuid=template_uuid,
+            folder_id=folder_id,
+            template_name=template_name,
+            has_stoppers=has_stoppers,
         )
+
+        self.sync_service.sync()
 
         self.load_template_database_table()
         self.load_templates_to_eva_page()
@@ -1050,9 +1074,24 @@ class MainWindow(QMainWindow):
         if answer != QMessageBox.Yes:
             return
 
-        self.template_repository.delete_by_ids(
-            record_ids
-        )
+        for record_id in record_ids:
+            template_uuid = (
+                self.template_repository.get_uuid_by_id(
+                    record_id
+                )
+            )
+
+            if template_uuid is None:
+                continue
+
+            self.cloud_sync_repository.delete_template(
+                template_uuid=template_uuid
+            )
+
+        self.sync_service.sync()
+
+        self.load_template_database_table()
+        self.load_templates_to_eva_page()
 
         self.load_template_database_table()
 
@@ -1080,17 +1119,21 @@ class MainWindow(QMainWindow):
         )
 
     def on_add_stopper(self):
-        dialog = StopperDialog(parent=self)
+        dialog = StopperDialog(
+            parent=self,
+        )
 
         if dialog.exec() != QDialog.Accepted:
             return
 
         diameter, stopper_name = dialog.get_data()
 
-        self.stopper_repository.add(
-            diameter,
-            stopper_name,
+        self.cloud_sync_repository.add_stopper(
+            diameter=diameter,
+            stopper_name=stopper_name,
         )
+
+        self.sync_service.sync()
 
         self.load_stopper_database_table()
 
@@ -1100,6 +1143,13 @@ class MainWindow(QMainWindow):
         )
 
         if record is None:
+            return
+
+        stopper_uuid = self.stopper_repository.get_uuid_by_id(
+            record_id
+        )
+
+        if stopper_uuid is None:
             return
 
         dialog = StopperDialog(
@@ -1113,11 +1163,13 @@ class MainWindow(QMainWindow):
 
         diameter, stopper_name = dialog.get_data()
 
-        self.stopper_repository.update(
-            record_id,
-            diameter,
-            stopper_name,
+        self.cloud_sync_repository.update_stopper(
+            stopper_uuid=stopper_uuid,
+            stopper_name=stopper_name,
+            diameter=diameter,
         )
+
+        self.sync_service.sync()
 
         self.load_stopper_database_table()
 
@@ -1139,9 +1191,21 @@ class MainWindow(QMainWindow):
         if answer != QMessageBox.Yes:
             return
 
-        self.stopper_repository.delete_by_ids(
-            record_ids
-        )
+        for record_id in record_ids:
+            stopper_uuid = (
+                self.stopper_repository.get_uuid_by_id(
+                    record_id
+                )
+            )
+
+            if stopper_uuid is None:
+                continue
+
+            self.cloud_sync_repository.delete_stopper(
+                stopper_uuid=stopper_uuid
+            )
+
+        self.sync_service.sync()
 
         self.load_stopper_database_table()
 

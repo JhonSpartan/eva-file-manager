@@ -16,6 +16,7 @@ class StopperRepository:
                 """
                 SELECT id, diameter, stopper_name
                 FROM stopper_catalog
+                WHERE deleted_at IS NULL
                 ORDER BY diameter, stopper_name
                 """
             ).fetchall()
@@ -39,6 +40,7 @@ class StopperRepository:
                 SELECT id, diameter, stopper_name
                 FROM stopper_catalog
                 WHERE diameter = ?
+                  AND deleted_at IS NULL
                 ORDER BY stopper_name
                 """,
                 (diameter,),
@@ -104,6 +106,7 @@ class StopperRepository:
                 SELECT id, diameter, stopper_name
                 FROM stopper_catalog
                 WHERE id = ?
+                  AND deleted_at IS NULL
                 """,
                 (record_id,),
             ).fetchone()
@@ -137,3 +140,25 @@ class StopperRepository:
                     record_id,
                 ),
             )
+
+    def get_uuid_by_id(
+            self,
+            record_id: int,
+    ) -> str | None:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT uuid
+                FROM stopper_catalog
+                WHERE id = ?
+                  AND deleted_at IS NULL
+                """,
+                (
+                    record_id,
+                ),
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        return row["uuid"]

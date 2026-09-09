@@ -16,6 +16,7 @@ class CopyRuleRepository:
                 """
                 SELECT id, mode, from_id, to_id
                 FROM copy_rules
+                WHERE deleted_at IS NULL
                 ORDER BY mode, from_id
                 """
             ).fetchall()
@@ -40,6 +41,7 @@ class CopyRuleRepository:
                 SELECT id, mode, from_id, to_id
                 FROM copy_rules
                 WHERE id = ?
+                  AND deleted_at IS NULL
                 """,
                 (record_id,),
             ).fetchone()
@@ -66,6 +68,7 @@ class CopyRuleRepository:
                 FROM copy_rules
                 WHERE mode = ?
                   AND from_id = ?
+                  AND deleted_at IS NULL
                 LIMIT 1
                 """,
                 (
@@ -142,3 +145,25 @@ class CopyRuleRepository:
                 """,
                 record_ids,
             )
+
+    def get_uuid_by_id(
+            self,
+            record_id: int,
+    ) -> str | None:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT uuid
+                FROM copy_rules
+                WHERE id = ?
+                  AND deleted_at IS NULL
+                """,
+                (
+                    record_id,
+                ),
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        return row["uuid"]
