@@ -21,3 +21,5 @@ Thumbs.db
 
 # Qt
 *.ui.autosave
+
+.env

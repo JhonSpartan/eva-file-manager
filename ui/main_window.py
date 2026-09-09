@@ -147,6 +147,11 @@ class MainWindow(QMainWindow):
         self.database = Database(db_path)
         self.database.initialize()
 
+
+        self.copy_rule_repository = CopyRuleRepository(
+            self.database
+        )
+
         self.copy_rule_repository = CopyRuleRepository(self.database)
         self.copy_rule_service = CopyRuleService(self.copy_rule_repository)
         self.template_repository = TemplateRepository(self.database)
