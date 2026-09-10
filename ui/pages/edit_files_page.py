@@ -11,6 +11,7 @@ class EditFilesPage(QWidget):
     renameFilesRequested = Signal()
     removeFilesRequested = Signal()
     replaceRequested = Signal(str)
+    stoppersRequested = Signal()
     filterRequested = Signal(str)
     returnProcessedRequested = Signal()
 
@@ -40,6 +41,9 @@ class EditFilesPage(QWidget):
         self.replace_btn.clicked.connect(
             self.on_replace_clicked
         )
+        self.stoppers_btn.clicked.connect(
+            self.stoppersRequested.emit
+        )
         self.copy_source_btn.clicked.connect(
             self.copySourceRequested.emit
         )
@@ -58,6 +62,7 @@ class EditFilesPage(QWidget):
         self.return_processed_btn.clicked.connect(
             self.returnProcessedRequested.emit
         )
+
 
     def setup_ui(self):
         main_layout = QGridLayout(self)
@@ -187,6 +192,7 @@ class EditFilesPage(QWidget):
 
         self.find_input = QLineEdit()
         self.replace_btn = QPushButton("Execute")
+        self.stoppers_btn = QPushButton("Stoppers...")
 
         file_actions_layout.addWidget(
             QLabel("Find text")
@@ -196,6 +202,9 @@ class EditFilesPage(QWidget):
         )
         file_actions_layout.addWidget(
             self.replace_btn
+        )
+        file_actions_layout.addWidget(
+            self.stoppers_btn
         )
         file_actions_layout.addStretch()
 

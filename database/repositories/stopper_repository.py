@@ -162,3 +162,29 @@ class StopperRepository:
             return None
 
         return row["uuid"]
+
+    def get_by_name(
+            self,
+            stopper_name: str,
+    ) -> StopperRecord | None:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT id, diameter, stopper_name
+                FROM stopper_catalog
+                WHERE stopper_name = ?
+                  AND deleted_at IS NULL
+                """,
+                (
+                    stopper_name,
+                ),
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        return StopperRecord(
+            id=row["id"],
+            diameter=row["diameter"],
+            stopper_name=row["stopper_name"],
+        )

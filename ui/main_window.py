@@ -31,6 +31,7 @@ from ui.dialogs.stopper_dialog import StopperDialog
 from ui.dialogs.replace_dialog import ReplaceDialog
 from ui.dialogs.export_dialog import ExportDialog
 from ui.dialogs.move_to_id_dialog import MoveToIdDialog
+from ui.dialogs.stopper_actions_dialog import (StopperActionsDialog)
 from ui.pages.copy_art_page import CopyArtsPage
 from ui.pages.database_page import DatabasePage
 from ui.pages.eva_page import EvaPage
@@ -279,6 +280,9 @@ class MainWindow(QMainWindow):
         )
         self.edit_page.replaceRequested.connect(
             self.on_replace_requested
+        )
+        self.edit_page.stoppersRequested.connect(
+            self.on_stoppers_clicked
         )
         self.edit_page.returnProcessedRequested.connect(
             self.return_processed_files
@@ -779,6 +783,265 @@ class MainWindow(QMainWindow):
 
             self.files_to_rename.append(
                 item.data(Qt.UserRole)
+            )
+
+    def on_stoppers_clicked(self) -> None:
+        find_text = (
+            self.edit_page
+            .find_input
+            .text()
+            .strip()
+        )
+
+        # Проверяем Find text
+        if not find_text:
+            QMessageBox.warning(
+                self,
+                "Stoppers",
+                "Find text is empty.",
+            )
+            return
+
+        # Получаем имя стоппера из Find text:
+        # "_av" -> "av"
+        # "AV"  -> "av"
+        stopper_name = find_text.lower()
+
+        if stopper_name.startswith("_"):
+            stopper_name = stopper_name[1:]
+
+        if not stopper_name:
+            QMessageBox.warning(
+                self,
+                "Stoppers",
+                "Invalid stopper name.",
+            )
+            return
+
+        # Проверяем, существует ли такой стоппер
+        # в stopper_catalog
+        stopper = self.stopper_repository.get_by_name(
+            stopper_name
+        )
+
+        if stopper is None:
+            QMessageBox.warning(
+                self,
+                "Stoppers",
+                (
+                    "Find text does not match "
+                    "a stopper name from the catalog."
+                ),
+            )
+            return
+
+        # Открываем окно выбора действия
+        dialog = StopperActionsDialog(
+            stopper=stopper,
+            parent=self,
+        )
+
+        result = dialog.exec()
+
+        if result != QDialog.Accepted:
+            return
+
+        # Собираем только видимые файлы
+        # из левого списка
+        files = []
+
+        left_list = (
+            self.edit_page.files_to_rename_list
+        )
+
+        for row in range(left_list.count()):
+            if left_list.isRowHidden(row):
+                continue
+
+            item = left_list.item(row)
+            file_path = item.data(Qt.UserRole)
+
+            files.append(file_path)
+
+        if not files:
+            QMessageBox.information(
+                self,
+                "Stoppers",
+                "No files to process.",
+            )
+            return
+
+        # Загружаем каталог шаблонов.
+        #
+        # Более длинные template_name проверяем первыми,
+        # чтобы при похожих названиях выбрать
+        # наиболее конкретное совпадение.
+        templates = sorted(
+            self.template_repository.get_all(),
+            key=lambda item: len(
+                item.template_name
+            ),
+            reverse=True,
+        )
+
+        files_with_stoppers = []
+        files_without_stoppers = []
+        unknown_files = []
+
+        # Определяем шаблон каждого готового файла.
+        #
+        # Например:
+        #
+        # EVA5925_art-16143_2_driver_footrest_vlv.dxf
+        #
+        # содержит неизменную основу:
+        #
+        # driver_footrest
+        for file_path in files:
+            file_name = Path(
+                file_path
+            ).stem.lower()
+
+            matched_template = None
+
+            for template in templates:
+                template_name = (
+                    template.template_name.lower()
+                )
+
+                if template_name in file_name:
+                    matched_template = template
+                    break
+
+            # Имя файла не удалось связать
+            # ни с одним шаблоном из каталога
+            if matched_template is None:
+                unknown_files.append(
+                    file_path
+                )
+                continue
+
+            if matched_template.has_stoppers:
+                files_with_stoppers.append(
+                    file_path
+                )
+            else:
+                files_without_stoppers.append(
+                    file_path
+                )
+
+        # Неизвестные шаблоны считаем небезопасной
+        # ситуацией и полностью отменяем операцию
+        if unknown_files:
+            QMessageBox.warning(
+                self,
+                "Stoppers",
+                (
+                    "Some templates were not found "
+                    "in the template catalog.\n\n"
+                    "The stopper operation was cancelled."
+                ),
+            )
+            return
+
+        # Среди выбранных файлов вообще нет
+        # шаблонов со стопперами
+        if not files_with_stoppers:
+            QMessageBox.information(
+                self,
+                "Stoppers",
+                (
+                    "The selected templates "
+                    "do not contain stoppers."
+                ),
+            )
+            return
+
+        # Если выбор смешанный, предупреждаем,
+        # что файлы без стопперов будут пропущены
+        if files_without_stoppers:
+            answer = QMessageBox.warning(
+                self,
+                "Stoppers",
+                (
+                    f"{len(files_without_stoppers)} selected "
+                    "file(s) use templates without stoppers.\n\n"
+                    "These files will be skipped.\n\n"
+                    "Continue?"
+                ),
+                QMessageBox.Yes
+                | QMessageBox.No,
+                QMessageBox.No,
+            )
+
+            if answer != QMessageBox.Yes:
+                return
+
+        # После preflight работаем ТОЛЬКО
+        # с файлами шаблонов, у которых
+        # has_stoppers=True
+        files = files_with_stoppers
+        file_count = len(files)
+
+        # Change diameter
+        if dialog.is_change_diameter():
+            new_diameter = (
+                dialog.get_new_diameter()
+            )
+
+            answer = QMessageBox.question(
+                self,
+                "Change stopper diameter",
+                (
+                    "Change stopper diameter to "
+                    f"{new_diameter:g} mm?\n\n"
+                    f"Files to modify: {file_count}"
+                ),
+                QMessageBox.Yes
+                | QMessageBox.No,
+                QMessageBox.No,
+            )
+
+            if answer != QMessageBox.Yes:
+                return
+
+            # Пока здесь будет подключён
+            # StopperEditor для изменения диаметра
+            print(
+                "Confirmed diameter change:",
+                stopper.stopper_name,
+                "->",
+                new_diameter,
+                "files:",
+                file_count,
+            )
+
+        # Delete stoppers
+        elif dialog.is_delete_stoppers():
+            answer = QMessageBox.warning(
+                self,
+                "Delete stoppers",
+                (
+                    f"Delete stoppers from "
+                    f"{file_count} files?\n\n"
+                    "DXF files will be modified.\n"
+                    "This operation cannot be undone."
+                ),
+                QMessageBox.Yes
+                | QMessageBox.No,
+                QMessageBox.No,
+            )
+
+            if answer != QMessageBox.Yes:
+                return
+
+            # Пока здесь будет подключён
+            # StopperEditor для удаления стопперов
+            print(
+                "Confirmed stopper deletion:",
+                stopper.stopper_name,
+                "files:",
+                file_count,
             )
 
     def remove_files(self):

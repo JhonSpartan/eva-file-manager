@@ -170,3 +170,30 @@ class TemplateRepository:
                 return None
 
             return row["uuid"]
+
+    def get_by_name(
+            self,
+            template_name: str,
+    ) -> TemplateRecord | None:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT id, folder_id, template_name, has_stoppers
+                FROM template_catalog
+                WHERE template_name = ?
+                  AND deleted_at IS NULL
+                """,
+                (
+                    template_name,
+                ),
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        return TemplateRecord(
+            id=row["id"],
+            folder_id=row["folder_id"],
+            template_name=row["template_name"],
+            has_stoppers=bool(row["has_stoppers"]),
+        )
