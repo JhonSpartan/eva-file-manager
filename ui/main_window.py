@@ -60,6 +60,7 @@ from services.eva_generation_planner import (EvaGenerationPlanner)
 from services.replace_planner import ReplacePlanner
 from services.delete_planner import DeletePlanner
 from services.move_to_id_planner import MoveToIdPlanner
+from workers.sync_worker import SyncWorker
 
 
 class Ui_MainWindow:
@@ -152,16 +153,27 @@ class MainWindow(QMainWindow):
         self.database.initialize()
 
         self.cloud_database = CloudDatabase()
-        self.cloud_database.initialize()
+        self.cloud_sync_repository = None
+        self.sync_service = None
 
-        self.cloud_sync_repository = CloudSyncRepository(
-            self.cloud_database
-        )
+        try:
+            self.cloud_database.initialize()
 
-        self.sync_service = SyncService(
-            self.database,
-            self.cloud_sync_repository,
-        )
+            self.cloud_sync_repository = CloudSyncRepository(
+                self.cloud_database
+            )
+
+            self.sync_service = SyncService(
+                self.database,
+                self.cloud_sync_repository,
+            )
+
+        except Exception as error:
+            print(
+                "Cloud database is unavailable:",
+                error,
+            )
+
 
 
         self.copy_rule_repository = CopyRuleRepository(
@@ -308,6 +320,8 @@ class MainWindow(QMainWindow):
         self.database_page.copyRulesTable.deleteRequested.connect(
             self.on_delete_copy_rules
         )
+
+        self.start_cloud_sync()
 
 
 
@@ -969,6 +983,95 @@ class MainWindow(QMainWindow):
             "\n".join(summary) or "No changes made.",
         )
 
+    def is_cloud_available(self) -> bool:
+        if (
+                self.cloud_sync_repository is None
+                or self.sync_service is None
+        ):
+            QMessageBox.warning(
+                self,
+                "Cloud unavailable",
+                (
+                    "Cloud database is unavailable.\n\n"
+                    "Changes cannot be saved while offline."
+                ),
+            )
+            return False
+
+        return True
+
+    def start_cloud_sync(self) -> None:
+        if (
+                self.sync_service is None
+                or self.cloud_sync_repository is None
+        ):
+            print("Cloud sync skipped: cloud is unavailable")
+            return
+
+        self.sync_thread = QThread(self)
+
+        self.sync_worker = SyncWorker(
+            self.sync_service
+        )
+
+        self.sync_worker.moveToThread(
+            self.sync_thread
+        )
+
+        self.sync_thread.started.connect(
+            self.sync_worker.run
+        )
+
+        self.sync_worker.finished.connect(
+            self.on_cloud_sync_finished
+        )
+
+        self.sync_worker.failed.connect(
+            self.on_cloud_sync_failed
+        )
+
+        self.sync_worker.finished.connect(
+            self.sync_thread.quit
+        )
+
+        self.sync_worker.failed.connect(
+            self.sync_thread.quit
+        )
+
+        self.sync_thread.finished.connect(
+            self.sync_worker.deleteLater
+        )
+
+        self.sync_thread.finished.connect(
+            self.sync_thread.deleteLater
+        )
+
+        self.sync_thread.start()
+
+    def on_cloud_sync_finished(
+            self,
+            result: dict,
+    ) -> None:
+        print(
+            "Cloud sync finished:",
+            result,
+        )
+
+        self.load_template_database_table()
+        self.load_stopper_database_table()
+        self.load_copy_rules_database_table()
+
+        self.load_templates_to_eva_page()
+
+    def on_cloud_sync_failed(
+            self,
+            error: str,
+    ) -> None:
+        print(
+            "Cloud sync failed:",
+            error,
+        )
+
     def load_template_database_table(self):
         records = (
             self.template_repository.get_all()
@@ -993,6 +1096,9 @@ class MainWindow(QMainWindow):
         )
 
     def on_add_template(self):
+        if not self.is_cloud_available():
+            return
+
         dialog = TemplateDialog(
             parent=self,
         )
@@ -1016,6 +1122,9 @@ class MainWindow(QMainWindow):
         self.load_templates_to_eva_page()
 
     def on_edit_template(self, record_id: int):
+        if not self.is_cloud_available():
+            return
+
         record = self.template_repository.get_by_id(
             record_id
         )
@@ -1060,6 +1169,9 @@ class MainWindow(QMainWindow):
             self,
             record_ids: list[int],
     ):
+        if not self.is_cloud_available():
+            return
+
         if not record_ids:
             return
 
@@ -1119,6 +1231,9 @@ class MainWindow(QMainWindow):
         )
 
     def on_add_stopper(self):
+        if not self.is_cloud_available():
+            return
+
         dialog = StopperDialog(
             parent=self,
         )
@@ -1138,6 +1253,9 @@ class MainWindow(QMainWindow):
         self.load_stopper_database_table()
 
     def on_edit_stopper(self, record_id: int):
+        if not self.is_cloud_available():
+            return
+
         record = self.stopper_repository.get_by_id(
             record_id
         )
@@ -1177,6 +1295,9 @@ class MainWindow(QMainWindow):
             self,
             record_ids: list[int],
     ):
+        if not self.is_cloud_available():
+            return
+
         if not record_ids:
             return
 
@@ -1233,6 +1354,9 @@ class MainWindow(QMainWindow):
         )
 
     def on_add_copy_rule(self):
+        if not self.is_cloud_available():
+            return
+
         dialog = CopyRuleDialog(parent=self)
 
         if dialog.exec() != QDialog.Accepted:
@@ -1240,11 +1364,13 @@ class MainWindow(QMainWindow):
 
         mode, from_id, to_id = dialog.get_data()
 
-        self.copy_rule_repository.add(
-            mode,
-            from_id,
-            to_id,
+        self.cloud_sync_repository.add_copy_rule(
+            mode=mode,
+            from_id=from_id,
+            to_id=to_id,
         )
+
+        self.sync_service.sync()
 
         self.load_copy_rules_database_table()
 
@@ -1252,11 +1378,21 @@ class MainWindow(QMainWindow):
             self,
             record_id: int,
     ):
+        if not self.is_cloud_available():
+            return
+
         record = self.copy_rule_repository.get_by_id(
             record_id
         )
 
         if record is None:
+            return
+
+        rule_uuid = self.copy_rule_repository.get_uuid_by_id(
+            record_id
+        )
+
+        if rule_uuid is None:
             return
 
         dialog = CopyRuleDialog(
@@ -1271,12 +1407,14 @@ class MainWindow(QMainWindow):
 
         mode, from_id, to_id = dialog.get_data()
 
-        self.copy_rule_repository.update(
-            record_id,
-            mode,
-            from_id,
-            to_id,
+        self.cloud_sync_repository.update_copy_rule(
+            rule_uuid=rule_uuid,
+            mode=mode,
+            from_id=from_id,
+            to_id=to_id,
         )
+
+        self.sync_service.sync()
 
         self.load_copy_rules_database_table()
 
@@ -1284,6 +1422,9 @@ class MainWindow(QMainWindow):
             self,
             record_ids: list[int],
     ):
+        if not self.is_cloud_available():
+            return
+
         if not record_ids:
             return
 
@@ -1298,9 +1439,21 @@ class MainWindow(QMainWindow):
         if answer != QMessageBox.Yes:
             return
 
-        self.copy_rule_repository.delete_by_ids(
-            record_ids
-        )
+        for record_id in record_ids:
+            rule_uuid = (
+                self.copy_rule_repository.get_uuid_by_id(
+                    record_id
+                )
+            )
+
+            if rule_uuid is None:
+                continue
+
+            self.cloud_sync_repository.delete_copy_rule(
+                rule_uuid=rule_uuid
+            )
+
+        self.sync_service.sync()
 
         self.load_copy_rules_database_table()
 
@@ -2444,3 +2597,4 @@ class MainWindow(QMainWindow):
                 f"{processed_count}"
             ),
         )
+
