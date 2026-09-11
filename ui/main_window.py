@@ -46,6 +46,8 @@ from workers.eva_generation_worker import EvaGenerationWorker
 from workers.export_worker import ExportWorker
 from workers.delete_worker import DeleteWorker
 from workers.move_to_id_worker import MoveToIdWorker
+from workers.stopper_worker import StopperWorker
+from workers.sync_worker import SyncWorker
 
 
 from database.database import Database
@@ -61,7 +63,9 @@ from services.eva_generation_planner import (EvaGenerationPlanner)
 from services.replace_planner import ReplacePlanner
 from services.delete_planner import DeletePlanner
 from services.move_to_id_planner import MoveToIdPlanner
-from workers.sync_worker import SyncWorker
+from services.stopper_detector import StopperDetector
+from services.stopper_editor import StopperEditor
+from services.stopper_validator import StopperValidator
 
 
 class Ui_MainWindow:
@@ -195,6 +199,12 @@ class MainWindow(QMainWindow):
         self.export_planner = ExportPlanner()
         self.delete_planner = DeletePlanner()
         self.move_to_id_planner = MoveToIdPlanner()
+        self.stopper_detector = StopperDetector()
+        self.stopper_validator = StopperValidator()
+        self.stopper_editor = StopperEditor(
+            detector=self.stopper_detector,
+            validator=self.stopper_validator,
+        )
 
         self.database_page = DatabasePage()
         self.ui.stacked_widget.addWidget(self.database_page)
@@ -1007,13 +1017,12 @@ class MainWindow(QMainWindow):
 
             # Пока здесь будет подключён
             # StopperEditor для изменения диаметра
-            print(
-                "Confirmed diameter change:",
-                stopper.stopper_name,
-                "->",
-                new_diameter,
-                "files:",
-                file_count,
+
+            self.start_stopper_worker(
+                files=files,
+                action="change",
+                expected_diameter=stopper.diameter,
+                new_diameter=new_diameter,
             )
 
         # Delete stoppers
@@ -1035,13 +1044,10 @@ class MainWindow(QMainWindow):
             if answer != QMessageBox.Yes:
                 return
 
-            # Пока здесь будет подключён
-            # StopperEditor для удаления стопперов
-            print(
-                "Confirmed stopper deletion:",
-                stopper.stopper_name,
-                "files:",
-                file_count,
+            self.start_stopper_worker(
+                files=files,
+                action="delete",
+                expected_diameter=stopper.diameter,
             )
 
     def remove_files(self):
@@ -2860,4 +2866,102 @@ class MainWindow(QMainWindow):
                 f"{processed_count}"
             ),
         )
+
+    def start_stopper_worker(
+            self,
+            files: list[str],
+            action: str,
+            expected_diameter: float,
+            new_diameter: float | None = None,
+    ) -> None:
+        self.stopper_thread = QThread()
+
+        self.stopper_worker = StopperWorker(
+            editor=self.stopper_editor,
+            files=files,
+            action=action,
+            expected_diameter=expected_diameter,
+            new_diameter=new_diameter,
+        )
+
+        self.stopper_worker.moveToThread(
+            self.stopper_thread
+        )
+
+        self.stopper_thread.started.connect(
+            self.stopper_worker.run
+        )
+
+        self.stopper_worker.finished.connect(
+            self.on_stopper_worker_finished
+        )
+
+        self.stopper_worker.failed.connect(
+            self.on_stopper_worker_failed
+        )
+
+        self.stopper_worker.finished.connect(
+            self.stopper_thread.quit
+        )
+
+        self.stopper_worker.failed.connect(
+            self.stopper_thread.quit
+        )
+
+        self.stopper_thread.finished.connect(
+            self.stopper_worker.deleteLater
+        )
+
+        self.stopper_thread.finished.connect(
+            self.stopper_thread.deleteLater
+        )
+
+        self.stopper_thread.start()
+
+    def on_stopper_worker_finished(
+            self,
+            result: dict,
+    ) -> None:
+        message = (
+            "Stopper operation finished.\n\n"
+            f"Files processed: "
+            f"{result['processed_files']}\n"
+            f"Files failed: "
+            f"{result['failed_files']}"
+        )
+
+        if result["changed_total"]:
+            message += (
+                "\n"
+                f"Stoppers changed: "
+                f"{result['changed_total']}"
+            )
+
+        if result["deleted_total"]:
+            message += (
+                "\n"
+                f"Stoppers deleted: "
+                f"{result['deleted_total']}"
+            )
+
+        QMessageBox.information(
+            self,
+            "Stoppers",
+            message,
+        )
+
+
+    def on_stopper_worker_failed(
+            self,
+            error: str,
+    ) -> None:
+        QMessageBox.critical(
+            self,
+            "Stoppers",
+            (
+                "Stopper operation failed.\n\n"
+                f"{error}"
+            ),
+        )
+
 
