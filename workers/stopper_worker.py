@@ -6,14 +6,14 @@ from services.stopper_editor import StopperEditor
 
 
 class StopperWorker(QObject):
-    progress = Signal(int, int)
+    progress = Signal(int, int, object, bool)
     finished = Signal(dict)
     failed = Signal(str)
 
     def __init__(
             self,
             editor: StopperEditor,
-            files: list[str],
+            files: list[Path],
             action: str,
             expected_diameter: float,
             new_diameter: float | None = None,
@@ -33,6 +33,8 @@ class StopperWorker(QObject):
             failed_files = 0
             changed_total = 0
             deleted_total = 0
+            changed_files = 0
+            deleted_files = 0
 
             total_files = len(
                 self.files
@@ -42,39 +44,39 @@ class StopperWorker(QObject):
                     self.files,
                     start=1,
             ):
+                modified = False
+
                 try:
                     if self.action == "change":
-                        result = (
-                            self.editor
-                            .change_diameter(
-                                file_path=Path(file_path),
-                                expected_diameter=(
-                                    self.expected_diameter
-                                ),
-                                new_diameter=(
-                                    self.new_diameter
-                                ),
-                            )
+                        result = self.editor.change_diameter(
+                            file_path=Path(file_path),
+                            expected_diameter=self.expected_diameter,
+                            new_diameter=self.new_diameter,
                         )
 
-                        changed_total += (
-                            result.changed_count
+                        changed_total += result.changed_count
+
+                        modified = (
+                                result.changed_count > 0
                         )
+
+                        if modified:
+                            changed_files += 1
 
                     elif self.action == "delete":
-                        result = (
-                            self.editor
-                            .delete_stoppers(
-                                file_path=Path(file_path),
-                                expected_diameter=(
-                                    self.expected_diameter
-                                ),
-                            )
+                        result = self.editor.delete_stoppers(
+                            file_path=Path(file_path),
+                            expected_diameter=self.expected_diameter,
                         )
 
-                        deleted_total += (
-                            result.deleted_count
+                        deleted_total += result.deleted_count
+
+                        modified = (
+                                result.deleted_count > 0
                         )
+
+                        if modified:
+                            deleted_files += 1
 
                     else:
                         raise ValueError(
@@ -96,22 +98,17 @@ class StopperWorker(QObject):
                 self.progress.emit(
                     index,
                     total_files,
+                    file_path,
+                    modified,
                 )
-
             self.finished.emit(
                 {
-                    "processed_files": (
-                        processed_files
-                    ),
-                    "failed_files": (
-                        failed_files
-                    ),
-                    "changed_total": (
-                        changed_total
-                    ),
-                    "deleted_total": (
-                        deleted_total
-                    ),
+                    "processed_files": processed_files,
+                    "failed_files": failed_files,
+                    "changed_total": changed_total,
+                    "changed_files": changed_files,
+                    "deleted_total": deleted_total,
+                    "deleted_files": deleted_files,
                 }
             )
 

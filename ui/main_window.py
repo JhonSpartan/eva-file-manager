@@ -2892,6 +2892,10 @@ class MainWindow(QMainWindow):
             self.stopper_worker.run
         )
 
+        self.stopper_worker.progress.connect(
+            self.on_stopper_progress
+        )
+
         self.stopper_worker.finished.connect(
             self.on_stopper_worker_finished
         )
@@ -2934,14 +2938,16 @@ class MainWindow(QMainWindow):
             message += (
                 "\n"
                 f"Stoppers changed: "
-                f"{result['changed_total']}"
+                f"{result['changed_total']} "
+                f"in {result['changed_files']} files"
             )
 
         if result["deleted_total"]:
             message += (
                 "\n"
                 f"Stoppers deleted: "
-                f"{result['deleted_total']}"
+                f"{result['deleted_total']} "
+                f"in {result['deleted_files']} files"
             )
 
         QMessageBox.information(
@@ -2964,4 +2970,59 @@ class MainWindow(QMainWindow):
             ),
         )
 
+    def on_stopper_progress(
+            self,
+            current: int,
+            total: int,
+            file_path,
+            modified: bool,
+    ) -> None:
+
+        self.edit_page.editFilesPbar.setMaximum(
+            total
+        )
+
+        self.edit_page.editFilesPbar.setValue(
+            current
+        )
+
+        if modified:
+            self.move_stopper_file(
+                Path(file_path)
+            )
+
+    def move_stopper_file(
+            self,
+            file_path: Path,
+    ) -> None:
+
+        left_list = (
+            self.edit_page.files_to_rename_list
+        )
+
+        right_list = (
+            self.edit_page.renamed_files_list
+        )
+
+        for row in range(left_list.count()):
+            item = left_list.item(row)
+
+            if item.data(Qt.UserRole) != file_path:
+                continue
+
+            moved_item = left_list.takeItem(
+                row
+            )
+
+            moved_item.setIcon(
+                self.check_icon
+            )
+
+            right_list.addItem(
+                moved_item
+            )
+
+            right_list.scrollToBottom()
+
+            break
 
