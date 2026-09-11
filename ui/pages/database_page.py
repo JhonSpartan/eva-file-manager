@@ -3,7 +3,7 @@
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
-    QTabWidget, QLabel, QLineEdit, QPushButton, QGroupBox, QGridLayout,
+    QTabWidget, QLabel, QLineEdit, QPushButton, QGroupBox, QGridLayout, QHBoxLayout,
 )
 
 from widgets.database_table import (
@@ -23,6 +23,8 @@ class DatabasePage(QWidget):
     editFilesDefaultPathRequested = Signal()
     openFilesLastOutputRequested = Signal()
 
+    syncRequested = Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -32,6 +34,21 @@ class DatabasePage(QWidget):
         layout = QVBoxLayout(self)
 
         self.tabs = QTabWidget()
+
+        self.cloud_status_label = QLabel(
+            "● Cloud: Offline"
+        )
+
+        self.sync_btn = QPushButton(
+            "Sync now"
+        )
+
+        sync_layout = QHBoxLayout()
+
+        sync_layout.addWidget(self.sync_btn)
+        sync_layout.addWidget(self.cloud_status_label)
+
+        sync_layout.addStretch()
 
         self.templatesTable = DatabaseTableWidget(
             [
@@ -77,8 +94,16 @@ class DatabasePage(QWidget):
             self.tabs
         )
 
+        layout.addLayout(
+            sync_layout
+        )
+
         layout.addWidget(
             self.paths_group
+        )
+
+        self.sync_btn.clicked.connect(
+            self.syncRequested.emit
         )
 
     def setup_paths_group(self):
@@ -269,3 +294,31 @@ class DatabasePage(QWidget):
             last_path is not None
             and last_path.exists()
         )
+
+    def set_cloud_online(self) -> None:
+        self.cloud_status_label.setText(
+            "● Cloud: Online"
+        )
+
+        self.cloud_status_label.setStyleSheet(
+            "color: green;"
+        )
+
+    def set_cloud_offline(self) -> None:
+        self.cloud_status_label.setText(
+            "● Cloud: Offline"
+        )
+
+        self.cloud_status_label.setStyleSheet(
+            "color: red;"
+        )
+
+    def set_cloud_syncing(self) -> None:
+        self.cloud_status_label.setText(
+            "● Cloud: Syncing..."
+        )
+
+        self.cloud_status_label.setStyleSheet(
+            "color: orange;"
+        )
+

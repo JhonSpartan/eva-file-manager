@@ -294,6 +294,9 @@ class MainWindow(QMainWindow):
         self.edit_page.stoppersRequested.connect(
             self.on_stoppers_clicked
         )
+        self.database_page.syncRequested.connect(
+            self.start_cloud_sync
+        )
         self.edit_page.returnProcessedRequested.connect(
             self.return_processed_files
         )
@@ -1274,8 +1277,15 @@ class MainWindow(QMainWindow):
                 self.sync_service is None
                 or self.cloud_sync_repository is None
         ):
-            print("Cloud sync skipped: cloud is unavailable")
+            print(
+                "Cloud sync skipped: cloud is unavailable"
+            )
+
+            self.database_page.set_cloud_offline()
+
             return
+
+        self.database_page.set_cloud_syncing()
 
         self.sync_thread = QThread(self)
 
@@ -1326,6 +1336,8 @@ class MainWindow(QMainWindow):
             result,
         )
 
+        self.database_page.set_cloud_online()
+
         self.load_template_database_table()
         self.load_stopper_database_table()
         self.load_copy_rules_database_table()
@@ -1340,6 +1352,8 @@ class MainWindow(QMainWindow):
             "Cloud sync failed:",
             error,
         )
+
+        self.database_page.set_cloud_offline()
 
     def load_template_database_table(self):
         records = (
