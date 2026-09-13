@@ -6,7 +6,7 @@ class CloudSyncRepository:
     def __init__(
             self,
             database: CloudDatabase,
-    ):
+    ) -> None:
         self.database = database
 
     def get_copy_rules(
@@ -34,12 +34,7 @@ class CloudSyncRepository:
                 ]
 
                 return [
-                    dict(
-                        zip(
-                            columns,
-                            row,
-                        )
-                    )
+                    dict(zip(columns, row))
                     for row in cursor.fetchall()
                 ]
 

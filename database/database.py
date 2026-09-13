@@ -9,7 +9,7 @@ class Database:
     def __init__(
             self,
             db_path: Path,
-    ):
+    ) -> None:
         self.db_path = db_path
 
     def connect(

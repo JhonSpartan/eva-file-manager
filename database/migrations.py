@@ -3,6 +3,7 @@ import uuid
 
 from datetime import datetime, timezone
 
+
 class DatabaseMigrator:
 
     CURRENT_VERSION = 2

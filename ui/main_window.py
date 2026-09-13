@@ -119,6 +119,10 @@ class Ui_MainWindow:
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+
+        self.sync_thread: QThread | None = None
+        self.sync_worker: SyncWorker | None = None
+
         self.ui = Ui_MainWindow()
         self.ui.setup_ui(self)
         self.setup_connections()
@@ -158,32 +162,9 @@ class MainWindow(QMainWindow):
         self.database.initialize()
 
         self.cloud_database = CloudDatabase()
-        self.cloud_sync_repository = None
-        self.sync_service = None
 
-        try:
-            self.cloud_database.initialize()
-
-            self.cloud_sync_repository = CloudSyncRepository(
-                self.cloud_database
-            )
-
-            self.sync_service = SyncService(
-                self.database,
-                self.cloud_sync_repository,
-            )
-
-        except Exception as error:
-            print(
-                "Cloud database is unavailable:",
-                error,
-            )
-
-
-
-        self.copy_rule_repository = CopyRuleRepository(
-            self.database
-        )
+        self.cloud_sync_repository: CloudSyncRepository | None = None
+        self.sync_service: SyncService | None = None
 
         self.copy_rule_repository = CopyRuleRepository(self.database)
         self.copy_rule_service = CopyRuleService(self.copy_rule_repository)
@@ -352,6 +333,10 @@ class MainWindow(QMainWindow):
 
     def load_icons(self):
         self.check_icon = QIcon("resources/icons/check.svg")
+
+    def on_cloud_sync_thread_finished(self) -> None:
+        self.sync_thread = None
+        self.sync_worker = None
 
     def on_load_files_requested(self, current_path: str | None):
         start_dir = current_path if current_path else str(Path.home())
@@ -1272,16 +1257,20 @@ class MainWindow(QMainWindow):
 
         return True
 
-    def start_cloud_sync(self) -> None:
-        if (
-                self.sync_service is None
-                or self.cloud_sync_repository is None
-        ):
-            print(
-                "Cloud sync skipped: cloud is unavailable"
-            )
+    def on_cloud_services_ready(
+            self,
+            cloud_sync_repository,
+            sync_service,
+    ) -> None:
+        self.cloud_sync_repository = cloud_sync_repository
+        self.sync_service = sync_service
 
-            self.database_page.set_cloud_offline()
+    def start_cloud_sync(self) -> None:
+
+        if (
+                self.sync_thread is not None
+                and self.sync_thread.isRunning()
+        ):
 
             return
 
@@ -1290,7 +1279,9 @@ class MainWindow(QMainWindow):
         self.sync_thread = QThread(self)
 
         self.sync_worker = SyncWorker(
-            self.sync_service
+            self.database,
+            self.cloud_database,
+            self.sync_service,
         )
 
         self.sync_worker.moveToThread(
@@ -1299,6 +1290,10 @@ class MainWindow(QMainWindow):
 
         self.sync_thread.started.connect(
             self.sync_worker.run
+        )
+
+        self.sync_worker.services_ready.connect(
+            self.on_cloud_services_ready
         )
 
         self.sync_worker.finished.connect(
@@ -1323,6 +1318,10 @@ class MainWindow(QMainWindow):
 
         self.sync_thread.finished.connect(
             self.sync_thread.deleteLater
+        )
+
+        self.sync_thread.finished.connect(
+            self.on_cloud_sync_thread_finished
         )
 
         self.sync_thread.start()

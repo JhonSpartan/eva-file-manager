@@ -2,8 +2,13 @@ class CloudDatabaseMigrator:
 
     CURRENT_VERSION = 1
 
-    def migrate(self, connection) -> None:
-        self.ensure_schema_version_table(connection)
+    def migrate(
+            self,
+            connection,
+    ) -> None:
+        self.ensure_schema_version_table(
+            connection
+        )
 
         current_version = self.get_current_version(
             connection
