@@ -62,7 +62,43 @@ class ArtCopyValidator:
                 five_d_mode,
             )
 
+        self._adjust_destination_selection_issues(
+            destinations,
+            result,
+        )
+
         return result
+
+    def _adjust_destination_selection_issues(
+            self,
+            destinations: list[ArtSelection],
+            result: CopyValidationResult,
+    ) -> None:
+
+        selected_id_names = set()
+
+        for destination in destinations:
+            for id_path, state in destination.id_states.items():
+
+                if state == SelectionState.NONE:
+                    continue
+
+                selected_id_names.add(
+                    id_path.name
+                )
+
+        for issue in result.issues:
+
+            if (
+                    issue.issue_type
+                    != ValidationIssueType.DESTINATION_ID_NOT_SELECTED
+            ):
+                continue
+
+            if issue.id_name not in selected_id_names:
+                continue
+
+            issue.action = ValidationAction.CONFIRM
 
     def _validate_destination(
             self,

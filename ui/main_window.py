@@ -59,6 +59,7 @@ from database.repositories.copy_rule_repository import CopyRuleRepository
 from services.copy_rules import CopyRuleService
 from models.eva_models import PreparedEva, PreviewTemplate
 from models.file_action_models import ReplaceMode
+from models.copy_models import ValidationIssueType
 from services.eva_generation_planner import (EvaGenerationPlanner)
 from services.replace_planner import ReplacePlanner
 from services.delete_planner import DeletePlanner
@@ -80,15 +81,39 @@ class Ui_MainWindow:
         self.main_layout = QHBoxLayout(self.central_widget)
 
         # === Боковое меню ===
-        self.side_menu = QVBoxLayout()
-        self.side_menu.setAlignment(Qt.AlignTop)
+        self.side_menu_widget = QWidget()
+        self.side_menu_widget.setObjectName(
+            "sideMenu"
+        )
+
+        self.side_menu = QVBoxLayout(
+            self.side_menu_widget
+        )
+        self.side_menu.setAlignment(
+            Qt.AlignTop
+        )
+
+        self.side_menu.setContentsMargins(
+            10, 12, 10, 12
+        )
+
+        self.side_menu.setSpacing(
+            8
+        )
 
         self.btn_eva = QPushButton("EVA")
         self.btn_other1 = QPushButton("Другая страница 1")
         self.btn_other2 = QPushButton("Другая страница 2")
         self.btn_other3 = QPushButton("Другая страница 3")
 
-        for btn in (self.btn_eva, self.btn_other1, self.btn_other2, self.btn_other3):
+        for btn in (
+                self.btn_eva,
+                self.btn_other1,
+                self.btn_other2,
+                self.btn_other3,
+        ):
+            btn.setCheckable(True)
+            btn.setAutoExclusive(True)
             btn.setMinimumHeight(40)
             self.side_menu.addWidget(btn)
 
@@ -97,9 +122,13 @@ class Ui_MainWindow:
         self.btn_exit = QPushButton("Выход")
         self.btn_exit.setMinimumHeight(40)
 
-        self.side_menu.addWidget(self.btn_exit)
+        self.side_menu.addWidget(
+            self.btn_exit
+        )
 
-        self.main_layout.addLayout(self.side_menu)
+        self.main_layout.addWidget(
+            self.side_menu_widget
+        )
 
         # === Основная область с вкладками ===
         self.stacked_widget = QStackedWidget()
@@ -332,16 +361,60 @@ class MainWindow(QMainWindow):
 
         self.start_cloud_sync()
 
+    def show_page(
+            self,
+            page,
+            button,
+    ) -> None:
+        self.ui.stacked_widget.setCurrentWidget(
+            page
+        )
 
+        button.setChecked(
+            True
+        )
 
     def setup_connections(self):
         # === Меню слева ===
-        self.ui.btn_eva.clicked.connect(lambda: self.ui.stacked_widget.setCurrentWidget(self.eva_page))
-        self.ui.btn_other1.clicked.connect(lambda: self.ui.stacked_widget.setCurrentWidget(self.copy_page))
-        self.ui.btn_other2.clicked.connect(lambda: self.ui.stacked_widget.setCurrentWidget(self.edit_page))
-        self.ui.btn_other3.clicked.connect(lambda: self.ui.stacked_widget.setCurrentWidget(self.database_page))
-        self.ui.btn_exit.clicked.connect(self.close)
-        self.edit_page.openExportFolderRequested.connect(self.on_open_export_folder_requested)
+        self.ui.btn_eva.clicked.connect(
+            lambda: self.show_page(
+                self.eva_page,
+                self.ui.btn_eva,
+            )
+        )
+
+        self.ui.btn_other1.clicked.connect(
+            lambda: self.show_page(
+                self.copy_page,
+                self.ui.btn_other1,
+            )
+        )
+
+        self.ui.btn_other2.clicked.connect(
+            lambda: self.show_page(
+                self.edit_page,
+                self.ui.btn_other2,
+            )
+        )
+
+        self.ui.btn_other3.clicked.connect(
+            lambda: self.show_page(
+                self.database_page,
+                self.ui.btn_other3,
+            )
+        )
+
+        self.ui.btn_exit.clicked.connect(
+            self.close
+        )
+
+        self.edit_page.openExportFolderRequested.connect(
+            self.on_open_export_folder_requested
+        )
+
+        self.ui.btn_eva.setChecked(
+            True
+        )
 
 
     def load_icons(self):
@@ -1132,10 +1205,68 @@ class MainWindow(QMainWindow):
                 return
 
         # 3. Копирование без замены
-        if validation.confirmation_issues:
+        # 3. Подтверждения перед копированием
+        unselected_id_issues = [
+            issue
+            for issue in validation.confirmation_issues
+            if (
+                    issue.issue_type
+                    == ValidationIssueType.DESTINATION_ID_NOT_SELECTED
+            )
+        ]
+
+        add_without_replace_issues = [
+            issue
+            for issue in validation.confirmation_issues
+            if (
+                    issue.issue_type
+                    == ValidationIssueType.ADD_FILES_WITHOUT_REPLACEMENT
+            )
+        ]
+
+        if unselected_id_issues:
             message = "\n".join(
                 issue.message
-                for issue in validation.confirmation_issues
+                for issue in unselected_id_issues
+            )
+
+            dialog = QMessageBox(self)
+            dialog.setWindowTitle(
+                "Unselected destination IDs"
+            )
+            dialog.setIcon(
+                QMessageBox.Warning
+            )
+            dialog.setText(
+                message
+            )
+            dialog.setInformativeText(
+                "Some matching destination IDs are not selected."
+            )
+
+            skip_button = dialog.addButton(
+                "Skip unselected IDs",
+                QMessageBox.AcceptRole,
+            )
+
+            cancel_button = dialog.addButton(
+                "Cancel",
+                QMessageBox.RejectRole,
+            )
+
+            dialog.setDefaultButton(
+                cancel_button
+            )
+
+            dialog.exec()
+
+            if dialog.clickedButton() != skip_button:
+                return
+
+        if add_without_replace_issues:
+            message = "\n".join(
+                issue.message
+                for issue in add_without_replace_issues
             )
 
             answer = QMessageBox.question(

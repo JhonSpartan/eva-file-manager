@@ -99,7 +99,21 @@ class ArtCopyPlanner:
                 [],
             )
 
-            if destination_state != SelectionState.NONE:
+            if (
+                    source_state == SelectionState.FULL
+                    and destination_state == SelectionState.NONE
+            ):
+                continue
+
+            is_redirected_5d = (
+                    five_d_mode
+                    and source_id_name != destination_id_name
+            )
+
+            if (
+                    destination_state != SelectionState.NONE
+                    and not is_redirected_5d
+            ):
                 plan.files_to_delete.extend(
                     destination_files
                 )
