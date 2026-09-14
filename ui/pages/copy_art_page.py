@@ -90,11 +90,47 @@ class CopyArtsPage(QWidget):
         self.removeDstArtsButton = QPushButton("Remove selected")
         self.clearDstArtsButton = QPushButton("Clear")
 
-        from_layout.addWidget(self.removeSrcArtsButton)
-        from_layout.addWidget(self.clearSrcArtsButton)
+        # === Tree controls ===
+        self.removeSrcArtsButton = QPushButton("Remove selected")
+        self.clearSrcArtsButton = QPushButton("Clear")
 
-        to_layout.addWidget(self.removeDstArtsButton)
-        to_layout.addWidget(self.clearDstArtsButton)
+        self.removeDstArtsButton = QPushButton("Remove selected")
+        self.clearDstArtsButton = QPushButton("Clear")
+
+        src_buttons_layout = QHBoxLayout()
+
+        src_buttons_layout.addWidget(
+            self.removeSrcArtsButton,
+            1,
+        )
+
+        src_buttons_layout.addWidget(
+            self.clearSrcArtsButton,
+            0,
+        )
+
+        from_layout.addLayout(
+            src_buttons_layout
+        )
+
+        dst_buttons_layout = QHBoxLayout()
+
+        dst_buttons_layout.addWidget(
+            self.removeDstArtsButton,
+            1,
+        )
+
+        dst_buttons_layout.addWidget(
+            self.clearDstArtsButton,
+            0,
+        )
+
+        to_layout.addLayout(
+            dst_buttons_layout
+        )
+
+        self.clearSrcArtsButton.setMinimumWidth(100)
+        self.clearDstArtsButton.setMinimumWidth(100)
 
         # ==================================================
         # === Progress bar (row 2, full width) ============

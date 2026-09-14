@@ -51,18 +51,22 @@ class DatabasePage(QWidget):
         sync_layout.addStretch()
 
         self.templatesTable = DatabaseTableWidget(
-            [
+            headers=[
                 "Folder ID",
                 "Template",
-                "Stoppers"
-            ]
+                "Stoppers",
+            ],
+            stretch_column=2,
+            center_columns={1, 3}
         )
 
         self.stoppersTable = DatabaseTableWidget(
             [
                 "Diameter",
                 "Stopper",
-            ]
+            ],
+            stretch_column=2,
+            center_columns={1}
         )
 
         self.copyRulesTable = DatabaseTableWidget(
@@ -70,7 +74,8 @@ class DatabasePage(QWidget):
                 "Mode",
                 "From ID",
                 "To ID",
-            ]
+            ],
+            center_columns = {1, 2, 3}
         )
 
         self.tabs.addTab(

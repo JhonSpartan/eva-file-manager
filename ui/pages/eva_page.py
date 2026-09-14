@@ -264,21 +264,39 @@ class EvaPage(QWidget):
             ):
                 group.setEnabled(False)
 
-            group_layout = QVBoxLayout(group)
+            group_layout = QHBoxLayout(group)
 
-            button_layout = QHBoxLayout()
+            templates_layout = QVBoxLayout()
+            templates_layout.setAlignment(Qt.AlignTop)
+
+            button_layout = QVBoxLayout()
+            button_layout.setAlignment(Qt.AlignTop)
 
             add_custom_button = QPushButton("+")
             add_custom_button.setFixedSize(24, 24)
+            add_custom_button.setStyleSheet("""
+                QPushButton {
+                    padding: 0px;
+                    text-align: center;
+                }
+            """)
             add_custom_button.setToolTip(
                 "Добавить custom-шаблон"
             )
 
-            button_layout.addStretch()
-            button_layout.addWidget(add_custom_button)
+            button_layout.addWidget(
+                add_custom_button
+            )
 
-            group_layout.addLayout(button_layout)
+            group_layout.addLayout(
+                templates_layout,
+                1,
+            )
 
+            group_layout.addLayout(
+                button_layout,
+                0,
+            )
 
             add_custom_button.clicked.connect(
                 lambda checked=False, current_folder_id=folder_id:
@@ -334,7 +352,7 @@ class EvaPage(QWidget):
 
                 template_layout.addStretch()
 
-                group_layout.addLayout(
+                templates_layout.addLayout(
                     template_layout
                 )
 

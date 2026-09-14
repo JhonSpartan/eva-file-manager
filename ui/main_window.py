@@ -92,6 +92,13 @@ class Ui_MainWindow:
             btn.setMinimumHeight(40)
             self.side_menu.addWidget(btn)
 
+        self.side_menu.addStretch()
+
+        self.btn_exit = QPushButton("Выход")
+        self.btn_exit.setMinimumHeight(40)
+
+        self.side_menu.addWidget(self.btn_exit)
+
         self.main_layout.addLayout(self.side_menu)
 
         # === Основная область с вкладками ===
@@ -123,9 +130,11 @@ class MainWindow(QMainWindow):
         self.sync_thread: QThread | None = None
         self.sync_worker: SyncWorker | None = None
 
+        self.last_export_path: Path | None = None
+        self.pending_export_path: Path | None = None
+
         self.ui = Ui_MainWindow()
         self.ui.setup_ui(self)
-        self.setup_connections()
         self.load_icons()
         self.eva_counter = 0
         # === Progress bar default value ===
@@ -192,6 +201,8 @@ class MainWindow(QMainWindow):
         self.load_template_database_table()
         self.load_stopper_database_table()
         self.load_copy_rules_database_table()
+
+        self.setup_connections()
 
         self.art_copy_validator = ArtCopyValidator(self.copy_rule_service)
         self.art_copy_planner = ArtCopyPlanner(self.copy_rule_service)
@@ -329,6 +340,8 @@ class MainWindow(QMainWindow):
         self.ui.btn_other1.clicked.connect(lambda: self.ui.stacked_widget.setCurrentWidget(self.copy_page))
         self.ui.btn_other2.clicked.connect(lambda: self.ui.stacked_widget.setCurrentWidget(self.edit_page))
         self.ui.btn_other3.clicked.connect(lambda: self.ui.stacked_widget.setCurrentWidget(self.database_page))
+        self.ui.btn_exit.clicked.connect(self.close)
+        self.edit_page.openExportFolderRequested.connect(self.on_open_export_folder_requested)
 
 
     def load_icons(self):
@@ -427,16 +440,17 @@ class MainWindow(QMainWindow):
     def start_rename(self):
         self.set_processing_state(True)
         self.thread = QThread()
-        self.worker = RenameWorker(self.files_to_rename, self.file_service)
+        self.rename_worker  = RenameWorker(self.files_to_rename, self.file_service)
 
-        self.worker.moveToThread(self.thread)
+        self.rename_worker.moveToThread(self.thread)
 
-        self.thread.started.connect(self.worker.run)
-        self.worker.progress.connect(self.on_rename_progress)
-        self.worker.finished.connect(self.on_rename_finished)
+        self.thread.started.connect(self.rename_worker.run)
+        self.rename_worker.progress.connect(self.on_rename_progress)
+        self.rename_worker.finished.connect(self.on_rename_finished)
+        self.rename_worker.failed.connect(self.on_rename_failed)
 
-        self.worker.finished.connect(self.thread.quit)
-        self.worker.finished.connect(self.worker.deleteLater)
+        self.rename_worker.finished.connect(self.thread.quit)
+        self.rename_worker.finished.connect(self.rename_worker.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
 
         self.thread.start()
@@ -459,6 +473,19 @@ class MainWindow(QMainWindow):
         self.edit_page.editFilesPbar.setValue(current)
 
         self.move_renamed_file(file_result)
+
+    def on_rename_failed(
+            self,
+            error: str,
+    ) -> None:
+        QMessageBox.critical(
+            self,
+            "Rename failed",
+            error,
+        )
+
+        self.files_to_rename.clear()
+        self.set_processing_state(False)
 
     def on_rename_finished(self, result):
         summary = []
@@ -734,16 +761,16 @@ class MainWindow(QMainWindow):
 
         self.set_processing_state(True)
         self.thread = QThread()
-        self.worker = ReplaceWorker(self.files_for_replace, find_text, replace_text, self.file_service)
+        self.replace_worker = ReplaceWorker(self.files_for_replace, find_text, replace_text, self.file_service)
 
         self.worker.moveToThread(self.thread)
 
         self.thread.started.connect(self.worker.run)
-        self.worker.progress.connect(self.on_replace_progress)
-        self.worker.finished.connect(self.on_replace_finished)
+        self.replace_worker.progress.connect(self.on_replace_progress)
+        self.replace_worker.finished.connect(self.on_replace_finished)
 
-        self.worker.finished.connect(self.thread.quit)
-        self.worker.finished.connect(self.worker.deleteLater)
+        self.replace_worker.finished.connect(self.thread.quit)
+        self.replace_worker.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
 
         self.thread.start()
@@ -1144,32 +1171,32 @@ class MainWindow(QMainWindow):
 
         self.thread = QThread()
 
-        self.worker = ArtCopyWorker(
+        self.art_copy_worker = ArtCopyWorker(
             plan,
             self.art_copy_service,
             self.file_service,
         )
 
-        self.worker.moveToThread(self.thread)
+        self.art_copy_worker.moveToThread(self.thread)
 
         self.thread.started.connect(
-            self.worker.run
+            self.art_copy_worker.run
         )
 
-        self.worker.progress.connect(
+        self.art_copy_worker.progress.connect(
             self.on_copy_progress
         )
 
-        self.worker.finished.connect(
+        self.art_copy_worker.finished.connect(
             self.on_copy_finished
         )
 
-        self.worker.finished.connect(
+        self.art_copy_worker.finished.connect(
             self.thread.quit
         )
 
-        self.worker.finished.connect(
-            self.worker.deleteLater
+        self.art_copy_worker.finished.connect(
+            self.art_copy_worker.deleteLater
         )
 
         self.thread.finished.connect(
@@ -2293,6 +2320,7 @@ class MainWindow(QMainWindow):
             return
 
         self.current_export_plan = plan
+        self.pending_export_path = Path(destination_path)
 
         self.edit_page.editFilesPbar.setValue(0)
 
@@ -2378,6 +2406,17 @@ class MainWindow(QMainWindow):
 
         self.refresh_files_paths()
 
+        self.last_export_path = (
+            self.pending_export_path
+        )
+
+        if self.pending_export_path is not None:
+            self.last_export_path = (
+                self.pending_export_path
+            )
+
+        self.pending_export_path = None
+
         QMessageBox.information(
             self,
             "Export complete",
@@ -2394,6 +2433,7 @@ class MainWindow(QMainWindow):
     ) -> None:
 
         self.set_processing_state(False)
+        self.pending_export_path = None
 
         QMessageBox.critical(
             self,
@@ -3038,4 +3078,30 @@ class MainWindow(QMainWindow):
             right_list.scrollToBottom()
 
             break
+
+    def on_open_export_folder_requested(
+            self,
+    ) -> None:
+
+        if self.last_export_path is None:
+            QMessageBox.information(
+                self,
+                "Export",
+                "Выгрузка ещё не выполнялась.",
+            )
+            return
+
+        if not self.last_export_path.exists():
+            QMessageBox.warning(
+                self,
+                "Export",
+                "Папка последней выгрузки больше не существует.",
+            )
+            return
+
+        QDesktopServices.openUrl(
+            QUrl.fromLocalFile(
+                str(self.last_export_path)
+            )
+        )
 

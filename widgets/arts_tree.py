@@ -185,6 +185,15 @@ class ArtsTree(QTreeWidget):
                 self.takeTopLevelItem(index)
                 return
 
+    def _has_art(self, path: Path) -> bool:
+        for index in range(self.topLevelItemCount()):
+            item = self.topLevelItem(index)
+
+            if item.data(0, Qt.UserRole) == path:
+                return True
+
+        return False
+
     def startDrag(self, supportedActions):
         selected_items = self.selectedItems()
 
@@ -263,13 +272,23 @@ class ArtsTree(QTreeWidget):
             event.ignore()
             return
 
+        new_arts = [
+            art_path
+            for art_path in arts
+            if not self._has_art(art_path)
+        ]
+
+        if not new_arts:
+            event.ignore()
+            return
+
         # SOURCE — максимум один ART
         if self.mode == ArtsTreeMode.SOURCE:
-            if self.topLevelItemCount() + len(arts) > 1:
+            if self.topLevelItemCount() + len(new_arts) > 1:
                 event.ignore()
                 return
 
-        for art_path in arts:
+        for art_path in new_arts:
             self.add_art(art_path)
 
         event.setDropAction(Qt.MoveAction)

@@ -24,11 +24,15 @@ class DatabaseTableWidget(QWidget):
     def __init__(
             self,
             headers: list[str],
+            stretch_column: int | None = None,
+            center_columns: set[int] | None = None,
             parent=None,
     ):
         super().__init__(parent)
 
         self.headers = headers
+        self.stretch_column = stretch_column
+        self.center_columns = center_columns or set()
 
         self.setup_ui()
         self.setup_connections()
@@ -63,6 +67,22 @@ class DatabaseTableWidget(QWidget):
         self.table.setHorizontalHeaderLabels(
             [""] + self.headers
         )
+
+        header = self.table.horizontalHeader()
+
+        for column in range(
+                self.table.columnCount()
+        ):
+            if column == self.stretch_column:
+                header.setSectionResizeMode(
+                    column,
+                    QHeaderView.Stretch,
+                )
+            else:
+                header.setSectionResizeMode(
+                    column,
+                    QHeaderView.ResizeToContents,
+                )
 
         self.table.setSelectionBehavior(
             QAbstractItemView.SelectRows
@@ -99,10 +119,6 @@ class DatabaseTableWidget(QWidget):
             self._on_delete_clicked
         )
 
-        self.table.itemChanged.connect(
-            self._update_status
-        )
-
         self.header.checkStateChanged.connect(
             self._set_all_checked
         )
@@ -116,24 +132,38 @@ class DatabaseTableWidget(QWidget):
             row = self.table.rowCount()
             self.table.insertRow(row)
 
-            checkbox_item = QTableWidgetItem()
-            checkbox_item.setFlags(
-                checkbox_item.flags()
-                | Qt.ItemIsUserCheckable
-            )
-            checkbox_item.setCheckState(
-                Qt.Unchecked
+            checkbox = QCheckBox()
+
+            checkbox_container = QWidget()
+            checkbox_layout = QHBoxLayout(
+                checkbox_container
             )
 
-            checkbox_item.setData(
-                Qt.UserRole,
+            checkbox_layout.setContentsMargins(
+                0, 0, 0, 0
+            )
+
+            checkbox_layout.setAlignment(
+                Qt.AlignCenter
+            )
+
+            checkbox_layout.addWidget(
+                checkbox
+            )
+
+            checkbox.setProperty(
+                "record_id",
                 record["id"],
             )
 
-            self.table.setItem(
+            checkbox.stateChanged.connect(
+                self._update_status
+            )
+
+            self.table.setCellWidget(
                 row,
                 0,
-                checkbox_item,
+                checkbox_container,
             )
 
             for column, key in enumerate(
@@ -149,6 +179,11 @@ class DatabaseTableWidget(QWidget):
                     & ~Qt.ItemIsEditable
                 )
 
+                if column in self.center_columns:
+                    item.setTextAlignment(
+                        Qt.AlignCenter
+                    )
+
                 self.table.setItem(
                     row,
                     column,
@@ -163,14 +198,24 @@ class DatabaseTableWidget(QWidget):
         selected_ids = []
 
         for row in range(self.table.rowCount()):
-            item = self.table.item(row, 0)
+            container = self.table.cellWidget(
+                row,
+                0,
+            )
 
-            if (
-                item is not None
-                and item.checkState() == Qt.Checked
-            ):
-                record_id = item.data(
-                    Qt.UserRole
+            if container is None:
+                continue
+
+            checkbox = container.findChild(
+                QCheckBox
+            )
+
+            if checkbox is None:
+                continue
+
+            if checkbox.isChecked():
+                record_id = checkbox.property(
+                    "record_id"
                 )
 
                 selected_ids.append(
@@ -178,6 +223,37 @@ class DatabaseTableWidget(QWidget):
                 )
 
         return selected_ids
+
+    def _set_all_checked(
+            self,
+            state: Qt.CheckState,
+    ):
+        for row in range(self.table.rowCount()):
+            container = self.table.cellWidget(
+                row,
+                0,
+            )
+
+            if container is None:
+                continue
+
+            checkbox = container.findChild(
+                QCheckBox
+            )
+
+            if checkbox is None:
+                continue
+
+            checkbox.blockSignals(True)
+
+            checkbox.setChecked(
+                state == Qt.Checked
+            )
+
+            checkbox.blockSignals(False)
+
+        self._update_status()
+
 
     def _on_edit_clicked(self):
         record_ids = self._selected_record_ids()
@@ -235,22 +311,6 @@ class DatabaseTableWidget(QWidget):
         self.header.set_check_state(
             state
         )
-
-    def _set_all_checked(
-            self,
-            state: Qt.CheckState,
-    ):
-        self.table.blockSignals(True)
-
-        for row in range(self.table.rowCount()):
-            item = self.table.item(row, 0)
-
-            if item is not None:
-                item.setCheckState(state)
-
-        self.table.blockSignals(False)
-
-        self._update_status()
 
 class CheckBoxHeader(QHeaderView):
 

@@ -1,3 +1,4 @@
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QWidget, QLabel, QPushButton, QLineEdit, QListWidget,
     QProgressBar, QVBoxLayout, QHBoxLayout, QGridLayout, QGroupBox
@@ -18,6 +19,8 @@ class EditFilesPage(QWidget):
     copySourceRequested = Signal()
     deleteSourceRequested = Signal()
     moveToIdRequested = Signal()
+
+    openExportFolderRequested = Signal()
 
     copyProcessedRequested = Signal()
 
@@ -63,6 +66,13 @@ class EditFilesPage(QWidget):
             self.returnProcessedRequested.emit
         )
 
+        self.open_source_export_btn.clicked.connect(
+            self.openExportFolderRequested.emit
+        )
+
+        self.open_processed_export_btn.clicked.connect(
+            self.openExportFolderRequested.emit
+        )
 
     def setup_ui(self):
         main_layout = QGridLayout(self)
@@ -100,6 +110,7 @@ class EditFilesPage(QWidget):
         self.copy_source_btn = QPushButton("Export")
         self.delete_source_btn = QPushButton("Delete")
         self.move_to_id_btn = QPushButton("Move to ID")
+        self.rename_files_btn = QPushButton("Rename files")
 
         left_buttons_layout.addWidget(
             self.copy_source_btn
@@ -110,12 +121,20 @@ class EditFilesPage(QWidget):
         left_buttons_layout.addWidget(
             self.move_to_id_btn
         )
+        left_buttons_layout.addWidget(
+            self.rename_files_btn
+        )
+
+        self.open_source_export_btn = QPushButton("Open export folder")
 
         left_layout.addWidget(
             self.files_to_rename_list
         )
         left_layout.addLayout(
             left_buttons_layout
+        )
+        left_layout.addWidget(
+            self.open_source_export_btn
         )
 
         # --- Right: Processed files ---
@@ -127,6 +146,7 @@ class EditFilesPage(QWidget):
         self.return_processed_btn = QPushButton("←")
         self.return_processed_btn.setFixedWidth(40)
         self.copy_processed_btn = QPushButton("Export")
+        self.open_processed_export_btn = QPushButton("Open export folder")
 
 
         right_layout.addWidget(
@@ -143,6 +163,10 @@ class EditFilesPage(QWidget):
 
         right_layout.addLayout(
             right_actions_layout
+        )
+
+        right_layout.addWidget(
+            self.open_processed_export_btn
         )
 
         main_layout.addWidget(
@@ -174,13 +198,9 @@ class EditFilesPage(QWidget):
         buttons_group = QGroupBox()
         buttons_layout = QVBoxLayout(buttons_group)
 
-        self.rename_files_btn = QPushButton("Rename files")
-        self.remove_files_btn = QPushButton("Remove files")
-
-        self.rename_files_btn.setMinimumHeight(36)
+        self.remove_files_btn = QPushButton("Clear lists")
         self.remove_files_btn.setMinimumHeight(36)
 
-        buttons_layout.addWidget(self.rename_files_btn)
         buttons_layout.addWidget(self.remove_files_btn)
         buttons_layout.addStretch()
 
@@ -197,15 +217,27 @@ class EditFilesPage(QWidget):
         file_actions_layout.addWidget(
             QLabel("Find text")
         )
-        file_actions_layout.addWidget(
-            self.find_input
+
+        replace_layout = QHBoxLayout()
+
+        replace_layout.addWidget(
+            self.find_input,
+            1,
         )
-        file_actions_layout.addWidget(
-            self.replace_btn
+
+        replace_layout.addWidget(
+            self.replace_btn,
+            0,
         )
+
+        file_actions_layout.addLayout(
+            replace_layout
+        )
+
         file_actions_layout.addWidget(
             self.stoppers_btn
         )
+
         file_actions_layout.addStretch()
 
         main_layout.addWidget(
@@ -258,3 +290,4 @@ class EditFilesPage(QWidget):
 
     def on_remove_files_clicked(self):
         self.removeFilesRequested.emit()
+

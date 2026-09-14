@@ -129,6 +129,7 @@ class FileService:
             layers = doc.layers
         except IOError:
             print(f"Could not read the file: {new_file_path}")
+            return 0
         except ezdxf.DXFStructureError:
             print(f"Invalid DXF structure: {new_file_path}")
             return 0
