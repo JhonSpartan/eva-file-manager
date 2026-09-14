@@ -135,6 +135,9 @@ class DatabaseTableWidget(QWidget):
             checkbox = QCheckBox()
 
             checkbox_container = QWidget()
+            checkbox_container.setStyleSheet(
+                "background-color: transparent;"
+            )
             checkbox_layout = QHBoxLayout(
                 checkbox_container
             )
