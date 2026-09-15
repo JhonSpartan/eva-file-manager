@@ -13,9 +13,10 @@ from PySide6.QtWidgets import (
 )
 
 from models.file_action_models import ExportLevel
+from ui.dialogs.base_dialog import BaseDialog
 
 
-class ExportDialog(QDialog):
+class ExportDialog(BaseDialog):
 
     def __init__(
             self,
@@ -43,8 +44,8 @@ class ExportDialog(QDialog):
         self.level_combo = QComboBox()
 
         self.level_combo.addItem(
-            "Files",
-            ExportLevel.FILE,
+            "EVA folders",
+            ExportLevel.EVA,
         )
 
         self.level_combo.addItem(
@@ -53,8 +54,8 @@ class ExportDialog(QDialog):
         )
 
         self.level_combo.addItem(
-            "EVA folders",
-            ExportLevel.EVA,
+            "Files",
+            ExportLevel.FILE,
         )
 
         main_layout.addWidget(

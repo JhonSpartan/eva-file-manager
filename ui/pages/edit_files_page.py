@@ -195,13 +195,25 @@ class EditFilesPage(QWidget):
         # =====================================================
 
         # --- Left: existing rename action ---
-        buttons_group = QGroupBox()
-        buttons_layout = QVBoxLayout(buttons_group)
+        buttons_widget = QWidget()
+        buttons_layout = QVBoxLayout(
+            buttons_widget
+        )
 
-        self.remove_files_btn = QPushButton("Clear lists")
-        self.remove_files_btn.setMinimumHeight(36)
+        buttons_layout.setContentsMargins(
+            0, 10, 0, 0
+        )
 
-        buttons_layout.addWidget(self.remove_files_btn)
+        self.remove_files_btn = QPushButton(
+            "Clear lists"
+        )
+        self.remove_files_btn.setMinimumHeight(
+            36
+        )
+
+        buttons_layout.addWidget(
+            self.remove_files_btn
+        )
         buttons_layout.addStretch()
 
         # --- Right: File actions ---
@@ -241,7 +253,7 @@ class EditFilesPage(QWidget):
         file_actions_layout.addStretch()
 
         main_layout.addWidget(
-            buttons_group,
+            buttons_widget,
             3, 0
         )
 

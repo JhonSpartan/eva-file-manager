@@ -8,8 +8,10 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 
+from ui.dialogs.base_dialog import BaseDialog
 
-class CopyRuleDialog(QDialog):
+
+class CopyRuleDialog(BaseDialog):
 
     def __init__(
             self,

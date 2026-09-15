@@ -37,6 +37,7 @@ class DatabaseTableWidget(QWidget):
         self.setup_ui()
         self.setup_connections()
 
+
     def setup_ui(self):
         layout = QVBoxLayout(self)
 
@@ -56,6 +57,8 @@ class DatabaseTableWidget(QWidget):
 
         # Table
         self.table = QTableWidget()
+
+        self.table.setAlternatingRowColors(True)
 
         self.header = CheckBoxHeader(
             Qt.Horizontal,

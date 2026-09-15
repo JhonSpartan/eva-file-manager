@@ -10,15 +10,17 @@ from PySide6.QtWidgets import (
 from models.file_action_models import (
     DeleteLevel,
 )
+from ui.dialogs.base_dialog import BaseDialog
 
 
-class DeleteDialog(QDialog):
+class DeleteDialog(BaseDialog):
 
     def __init__(
             self,
             parent=None,
     ):
         super().__init__(parent)
+
 
         self.setWindowTitle("Delete")
         self.setModal(True)

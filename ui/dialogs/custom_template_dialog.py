@@ -1,3 +1,4 @@
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QDialog,
     QVBoxLayout,
@@ -11,9 +12,10 @@ from PySide6.QtWidgets import (
 )
 
 from models.eva_models import SessionTemplate, TemplateOrigin
+from ui.dialogs.base_dialog import BaseDialog
 
 
-class CustomTemplateDialog(QDialog):
+class CustomTemplateDialog(BaseDialog):
 
     def __init__(
             self,
@@ -138,10 +140,17 @@ class CustomTemplateDialog(QDialog):
             template.template_name
         )
 
-        delete_button = QPushButton("×")
+        delete_button = QPushButton()
         delete_button.setFixedSize(
             28,
             28,
+        )
+
+        delete_button.setIcon(
+            QIcon("resources/icons/delete.svg")
+        )
+        delete_button.setToolTip(
+            "Remove template"
         )
 
         row_layout.addWidget(

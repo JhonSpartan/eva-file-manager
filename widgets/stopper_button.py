@@ -1,3 +1,4 @@
+from PySide6.QtGui import QRegion
 from PySide6.QtWidgets import QPushButton
 
 from models.catalog_models import StopperRecord
@@ -15,22 +16,15 @@ class StopperButton(QPushButton):
             parent,
         )
 
+        self.setObjectName(
+            "stopperButton"
+        )
+
         self.stopper = stopper
 
         self.setCheckable(True)
 
         self.setFixedSize(
-            60,
-            60,
+            50,
+            50,
         )
-
-        self.setStyleSheet("""
-            QPushButton {
-                border: 2px solid;
-                border-radius: 30px;
-            }
-
-            QPushButton:checked {
-                border: 4px solid;
-            }
-        """)

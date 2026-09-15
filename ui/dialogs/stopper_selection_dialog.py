@@ -1,18 +1,20 @@
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog,
     QVBoxLayout,
     QGroupBox,
     QHBoxLayout,
     QScrollArea,
-    QWidget, QLineEdit, QPushButton, QListWidget, QListWidgetItem, QLabel,
+    QWidget, QLineEdit, QPushButton, QListWidget, QListWidgetItem, QLabel, QGridLayout,
 )
 
 from models.catalog_models import StopperRecord
 from models.eva_models import StopperCombination
+from ui.dialogs.base_dialog import BaseDialog
 from widgets.stopper_button import StopperButton
 
 
-class StopperSelectionDialog(QDialog):
+class StopperSelectionDialog(BaseDialog):
 
     def __init__(
             self,
@@ -59,14 +61,31 @@ class StopperSelectionDialog(QDialog):
 
         grouped_stoppers = self.group_stoppers()
 
-        for diameter, stoppers in grouped_stoppers.items():
+        for diameter in sorted(
+                grouped_stoppers,
+                reverse=True,
+        ):
+            stoppers = grouped_stoppers[
+                diameter
+            ]
+
             group = QGroupBox(
                 f"Ø {diameter:g} мм"
             )
 
-            group_layout = QHBoxLayout(group)
+            group_layout = QGridLayout(
+                group
+            )
 
-            for stopper in stoppers:
+            group_layout.setAlignment(
+                Qt.AlignLeft | Qt.AlignTop
+            )
+
+            buttons_per_row = 7
+
+            for index, stopper in enumerate(
+                    stoppers
+            ):
                 button = StopperButton(
                     stopper
                 )
@@ -75,13 +94,18 @@ class StopperSelectionDialog(QDialog):
                     self.update_current_combination
                 )
 
-                group_layout.addWidget(button)
+                row = index // buttons_per_row
+                column = index % buttons_per_row
+
+                group_layout.addWidget(
+                    button,
+                    row,
+                    column,
+                )
 
                 self.stopper_buttons.append(
                     button
                 )
-
-            group_layout.addStretch()
 
             self.groups_layout.addWidget(
                 group

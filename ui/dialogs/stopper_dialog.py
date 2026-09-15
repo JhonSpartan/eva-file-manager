@@ -10,8 +10,10 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 
+from ui.dialogs.base_dialog import BaseDialog
 
-class StopperDialog(QDialog):
+
+class StopperDialog(BaseDialog):
 
     def __init__(
             self,

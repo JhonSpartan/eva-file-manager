@@ -11,7 +11,10 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtWidgets import QCheckBox
 
-class TemplateDialog(QDialog):
+from ui.dialogs.base_dialog import BaseDialog
+
+
+class TemplateDialog(BaseDialog):
 
     def __init__(
             self,

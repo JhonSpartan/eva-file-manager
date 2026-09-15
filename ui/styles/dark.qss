@@ -70,6 +70,87 @@ QPushButton:disabled {
 }
 
 /* ==============================
+   SpinBox buttons
+   ============================== */
+
+QSpinBox::up-button,
+QDoubleSpinBox::up-button {
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+
+    width: 18px;
+
+    background-color: #2a3038;
+    border-left: 1px solid #3b434d;
+    border-bottom: 1px solid #3b434d;
+}
+
+QSpinBox::down-button,
+QDoubleSpinBox::down-button {
+    subcontrol-origin: border;
+    subcontrol-position: bottom right;
+
+    width: 18px;
+
+    background-color: #2a3038;
+    border-left: 1px solid #3b434d;
+}
+
+QSpinBox::up-button:hover,
+QSpinBox::down-button:hover,
+QDoubleSpinBox::up-button:hover,
+QDoubleSpinBox::down-button:hover {
+    background-color: #323a44;
+}
+
+QSpinBox::up-arrow,
+QDoubleSpinBox::up-arrow {
+    image: url(resources/icons/spin-up.svg);
+    width: 10px;
+    height: 10px;
+}
+
+QSpinBox::down-arrow,
+QDoubleSpinBox::down-arrow {
+    image: url(resources/icons/spin-down.svg);
+    width: 10px;
+    height: 10px;
+}
+
+/* ==============================
+   Stopper buttons
+   ============================== */
+
+QPushButton#stopperButton {
+    min-width: 50px;
+    max-width: 50px;
+    min-height: 50px;
+    max-height: 50px;
+
+    padding: 0px;
+
+    background-color: #2a3038;
+    color: #d7dce2;
+
+    border: 2px solid #3b434d;
+    border-radius: 25px;
+
+    margin-right: 10px;
+}
+
+QPushButton#stopperButton:hover {
+    background-color: #323a44;
+    border-color: #56616e;
+}
+
+QPushButton#stopperButton:checked {
+    background-color: #2b3d4d;
+    color: #ffffff;
+
+    border: 3px solid #466781;
+}
+
+/* ==============================
    Input fields
    ============================== */
 
@@ -311,19 +392,6 @@ QRadioButton:disabled {
 }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* ==============================
    Progress bars
    ============================== */
@@ -367,3 +435,5 @@ QWidget#sideMenu QPushButton {
     font-size: 13px;
     font-weight: 500;
 }
+
+

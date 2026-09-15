@@ -7,8 +7,10 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
 )
 
+from ui.dialogs.base_dialog import BaseDialog
 
-class MoveToIdDialog(QDialog):
+
+class MoveToIdDialog(BaseDialog):
 
     def __init__(
             self,

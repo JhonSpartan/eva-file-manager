@@ -1,5 +1,6 @@
 import re
 
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QGridLayout, QGroupBox,
     QLabel, QLineEdit, QPushButton, QHBoxLayout, QTreeWidget, QCheckBox, QTreeWidgetItem, QMessageBox
@@ -272,7 +273,16 @@ class EvaPage(QWidget):
             button_layout = QVBoxLayout()
             button_layout.setAlignment(Qt.AlignTop)
 
-            add_custom_button = QPushButton("+")
+            add_custom_button = QPushButton()
+
+            add_custom_button.setFixedSize(
+                24,
+                24,
+            )
+
+            add_custom_button.setIcon(
+                QIcon("resources/icons/add.svg")
+            )
             add_custom_button.setFixedSize(24, 24)
             add_custom_button.setStyleSheet("""
                 QPushButton {

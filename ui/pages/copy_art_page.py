@@ -22,7 +22,6 @@ class CopyArtsPage(QWidget):
     def setup_connections(self):
         self.load_arts_btn.clicked.connect(self.on_load_arts_clicked)
         self.copyAndRenameButton.clicked.connect(self.on_copy_and_rename_clicked)
-        self.removeSrcArtsButton.clicked.connect(self.srcArtsTree.remove_selected_arts)
         self.clearSrcArtsButton.clicked.connect(self.srcArtsTree.clear_tree)
         self.removeDstArtsButton.clicked.connect(self.dstArtsTree.remove_selected_arts)
         self.clearDstArtsButton.clicked.connect(self.dstArtsTree.clear_tree)
@@ -83,15 +82,7 @@ class CopyArtsPage(QWidget):
 
         main_layout.addLayout(right_column, 1, 1)
 
-        # ===Tree controls ========= (row 1) ===========
-        self.removeSrcArtsButton = QPushButton("Remove selected")
-        self.clearSrcArtsButton = QPushButton("Clear")
-
-        self.removeDstArtsButton = QPushButton("Remove selected")
-        self.clearDstArtsButton = QPushButton("Clear")
-
         # === Tree controls ===
-        self.removeSrcArtsButton = QPushButton("Remove selected")
         self.clearSrcArtsButton = QPushButton("Clear")
 
         self.removeDstArtsButton = QPushButton("Remove selected")
@@ -99,14 +90,11 @@ class CopyArtsPage(QWidget):
 
         src_buttons_layout = QHBoxLayout()
 
-        src_buttons_layout.addWidget(
-            self.removeSrcArtsButton,
-            1,
-        )
+        src_buttons_layout.addStretch()
 
         src_buttons_layout.addWidget(
             self.clearSrcArtsButton,
-            0,
+            # 0,
         )
 
         from_layout.addLayout(
@@ -169,7 +157,6 @@ class CopyArtsPage(QWidget):
             "dstArts": self.dstArtsTree,
             # "removeArts": self.removeArtNumbers,
             "copy": self.copyAndRenameButton,
-            "removeSrc": self.removeSrcArtsButton,
             "clearSrc": self.clearSrcArtsButton,
             "removeDst": self.removeDstArtsButton,
             "clearDst": self.clearDstArtsButton,

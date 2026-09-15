@@ -1,7 +1,9 @@
 from PySide6 import QtCore, QtGui, QtWidgets
 
+from ui.dialogs.base_dialog import BaseDialog
 
-class EvaDialog(QtWidgets.QDialog):
+
+class EvaDialog(BaseDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("EvaDialog")

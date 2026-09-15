@@ -11,8 +11,10 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
 )
 
+from ui.dialogs.base_dialog import BaseDialog
 
-class PathDialog(QDialog):
+
+class PathDialog(BaseDialog):
     def __init__(
             self,
             current_path: Path | None = None,

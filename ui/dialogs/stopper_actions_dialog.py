@@ -10,9 +10,10 @@ from PySide6.QtWidgets import (
 )
 
 from models.catalog_models import StopperRecord
+from ui.dialogs.base_dialog import BaseDialog
 
 
-class StopperActionsDialog(QDialog):
+class StopperActionsDialog(BaseDialog):
 
     def __init__(
             self,

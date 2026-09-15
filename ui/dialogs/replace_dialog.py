@@ -8,8 +8,10 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
 )
 
+from ui.dialogs.base_dialog import BaseDialog
 
-class ReplaceDialog(QDialog):
+
+class ReplaceDialog(BaseDialog):
 
     def __init__(
             self,
