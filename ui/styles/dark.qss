@@ -272,6 +272,10 @@ QWidget#sideMenu QPushButton:checked {
    ============================== */
 
 
+/* ==============================
+   Checkboxes
+   ============================== */
+
 QCheckBox,
 QRadioButton {
     background-color: transparent;
@@ -279,7 +283,27 @@ QRadioButton {
     spacing: 8px;
 }
 
-/* Disabled */
+QCheckBox::indicator:unchecked {
+    background-color: #20262d;
+    border: 1px solid #56616e;
+    border-radius: 2px;
+}
+
+QCheckBox::indicator:unchecked:hover {
+    background-color: #252c34;
+    border-color: #687583;
+}
+
+QRadioButton::indicator:unchecked {
+    background-color: #20262d;
+    border: 1px solid #56616e;
+    border-radius: 7px;
+}
+
+QRadioButton::indicator:unchecked:hover {
+    background-color: #252c34;
+    border-color: #687583;
+}
 
 QCheckBox:disabled,
 QRadioButton:disabled {

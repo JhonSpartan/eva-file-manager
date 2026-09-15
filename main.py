@@ -6,6 +6,7 @@ if __name__ == "__main__":
     from ui.main_window import MainWindow
 
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
 
     style_path = (
         Path(__file__).parent
