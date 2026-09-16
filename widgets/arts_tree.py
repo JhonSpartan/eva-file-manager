@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem, QAbstractItemView
 from enum import Enum
 from pathlib import Path
-from PySide6.QtCore import Qt, QMimeData
+from PySide6.QtCore import Qt, QMimeData, Signal
 from PySide6.QtGui import QDrag
 import json
 from models.copy_models import ArtSelection, SelectionState
@@ -15,6 +15,8 @@ class ArtsTreeMode(Enum):
 
 class ArtsTree(QTreeWidget):
     """Tree widget used for displaying EVA articles."""
+    checkStateChanged = Signal()
+    artsChanged = Signal()
 
     def __init__(
             self,
@@ -40,6 +42,7 @@ class ArtsTree(QTreeWidget):
 
     def clear_tree(self):
         self.clear()
+        self.artsChanged.emit()
 
     def _create_item(self, text: str, path: Path, draggable: bool) -> QTreeWidgetItem:
         item = QTreeWidgetItem([text])
@@ -120,6 +123,8 @@ class ArtsTree(QTreeWidget):
 
         finally:
             self.blockSignals(False)
+
+        self.checkStateChanged.emit()
 
     def update_children(
             self,
@@ -291,7 +296,11 @@ class ArtsTree(QTreeWidget):
         for art_path in new_arts:
             self.add_art(art_path)
 
-        event.setDropAction(Qt.MoveAction)
+        self.artsChanged.emit()
+
+        event.setDropAction(
+            Qt.MoveAction
+        )
         event.accept()
 
     def get_art_selections(self) -> list[ArtSelection]:
@@ -406,15 +415,213 @@ class ArtsTree(QTreeWidget):
         selected_items = self.selectedItems()
 
         for item in selected_items:
-            # удаляем только ART верхнего уровня
             if item.parent() is not None:
                 continue
 
-            index = self.indexOfTopLevelItem(item)
+            index = self.indexOfTopLevelItem(
+                item
+            )
 
             if index != -1:
-                self.takeTopLevelItem(index)
+                self.takeTopLevelItem(
+                    index
+                )
+
+        self.artsChanged.emit()
 
     def refresh_art(self, art_path: Path):
         self._remove_art(art_path)
         self.add_art(art_path)
+
+    def set_all_check_state(
+            self,
+            state: Qt.CheckState,
+    ) -> None:
+
+        if self.mode == ArtsTreeMode.AVAILABLE:
+            return
+
+        self.blockSignals(True)
+
+        try:
+            for index in range(
+                    self.topLevelItemCount()
+            ):
+                art_item = self.topLevelItem(
+                    index
+                )
+
+                art_item.setCheckState(
+                    0,
+                    state,
+                )
+
+                self.set_children_state(
+                    art_item,
+                    state,
+                )
+
+        finally:
+            self.blockSignals(False)
+
+    def get_overall_check_state(
+            self,
+    ) -> Qt.CheckState:
+
+        if self.topLevelItemCount() == 0:
+            return Qt.Unchecked
+
+        states = [
+            self.topLevelItem(index).checkState(0)
+            for index in range(
+                self.topLevelItemCount()
+            )
+        ]
+
+        if all(
+                state == Qt.Checked
+                for state in states
+        ):
+            return Qt.Checked
+
+        if all(
+                state == Qt.Unchecked
+                for state in states
+        ):
+            return Qt.Unchecked
+
+        return Qt.PartiallyChecked
+
+    def _id_name_sort_key(
+            self,
+            name: str,
+    ):
+        try:
+            return (0, int(name))
+        except ValueError:
+            return (1, name)
+
+    def get_available_id_names(
+            self,
+    ) -> list[str]:
+
+        id_names = set()
+
+        for art_index in range(
+                self.topLevelItemCount()
+        ):
+            art_item = self.topLevelItem(
+                art_index
+            )
+
+            for id_index in range(
+                    art_item.childCount()
+            ):
+                id_item = art_item.child(
+                    id_index
+                )
+
+                id_names.add(
+                    id_item.text(0)
+                )
+
+        return sorted(
+            id_names,
+            key=self._id_name_sort_key,
+        )
+
+    def set_id_checked(
+            self,
+            id_name: str,
+            checked: bool,
+    ) -> None:
+
+        state = (
+            Qt.Checked
+            if checked
+            else Qt.Unchecked
+        )
+
+        self.blockSignals(True)
+
+        try:
+            for art_index in range(
+                    self.topLevelItemCount()
+            ):
+                art_item = self.topLevelItem(
+                    art_index
+                )
+
+                for id_index in range(
+                        art_item.childCount()
+                ):
+                    id_item = art_item.child(
+                        id_index
+                    )
+
+                    if id_item.text(0) != id_name:
+                        continue
+
+                    id_item.setCheckState(
+                        0,
+                        state,
+                    )
+
+                    self.set_children_state(
+                        id_item,
+                        state,
+                    )
+
+                    self.update_parent(
+                        id_item,
+                    )
+
+        finally:
+            self.blockSignals(False)
+
+        self.checkStateChanged.emit()
+
+    def get_id_check_state(
+            self,
+            id_name: str,
+    ) -> Qt.CheckState:
+
+        states = []
+
+        for art_index in range(
+                self.topLevelItemCount()
+        ):
+            art_item = self.topLevelItem(
+                art_index
+            )
+
+            for id_index in range(
+                    art_item.childCount()
+            ):
+                id_item = art_item.child(
+                    id_index
+                )
+
+                if id_item.text(0) != id_name:
+                    continue
+
+                states.append(
+                    id_item.checkState(0)
+                )
+
+        if not states:
+            return Qt.Unchecked
+
+        if all(
+                state == Qt.Checked
+                for state in states
+        ):
+            return Qt.Checked
+
+        if all(
+                state == Qt.Unchecked
+                for state in states
+        ):
+            return Qt.Unchecked
+
+        return Qt.PartiallyChecked

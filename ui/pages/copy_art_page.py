@@ -16,6 +16,8 @@ class CopyArtsPage(QWidget):
         super().__init__(parent)
 
         self.current_directory: str | None = None
+        self.dstIdCheckboxes: dict[str, QCheckBox] = {}
+
         self.setup_ui()
         self.setup_connections()
 
@@ -25,6 +27,13 @@ class CopyArtsPage(QWidget):
         self.clearSrcArtsButton.clicked.connect(self.srcArtsTree.clear_tree)
         self.removeDstArtsButton.clicked.connect(self.dstArtsTree.remove_selected_arts)
         self.clearDstArtsButton.clicked.connect(self.dstArtsTree.clear_tree)
+        self.removeAvailableArtsButton.clicked.connect(self.artsTree.remove_selected_arts)
+        self.clearAvailableArtsButton.clicked.connect(self.artsTree.clear_tree)
+        self.srcMasterCheckbox.clicked.connect(self.on_src_master_clicked)
+        self.srcArtsTree.checkStateChanged.connect(self.update_src_master_checkbox)
+        self.dstMasterCheckbox.clicked.connect(self.on_dst_master_clicked)
+        self.dstArtsTree.checkStateChanged.connect(self.update_dst_master_checkbox)
+        self.dstArtsTree.artsChanged.connect(self.rebuild_dst_id_controls)
 
     def setup_ui(self):
         main_layout = QGridLayout(self)
@@ -85,16 +94,26 @@ class CopyArtsPage(QWidget):
         # === Tree controls ===
         self.clearSrcArtsButton = QPushButton("Clear")
 
+        self.srcMasterCheckbox = QCheckBox("Select all")
+        self.srcMasterCheckbox.setTristate(True)
+
         self.removeDstArtsButton = QPushButton("Remove selected")
         self.clearDstArtsButton = QPushButton("Clear")
 
+        self.dstMasterCheckbox = QCheckBox("Select all")
+        self.dstMasterCheckbox.setTristate(True)
+
+
         src_buttons_layout = QHBoxLayout()
+
+        src_buttons_layout.addWidget(
+            self.clearSrcArtsButton,
+        )
 
         src_buttons_layout.addStretch()
 
         src_buttons_layout.addWidget(
-            self.clearSrcArtsButton,
-            # 0,
+            self.srcMasterCheckbox
         )
 
         from_layout.addLayout(
@@ -105,16 +124,44 @@ class CopyArtsPage(QWidget):
 
         dst_buttons_layout.addWidget(
             self.removeDstArtsButton,
-            1,
         )
 
         dst_buttons_layout.addWidget(
             self.clearDstArtsButton,
-            0,
+        )
+
+        dst_buttons_layout.addStretch()
+
+        dst_buttons_layout.addWidget(
+            self.dstMasterCheckbox
         )
 
         to_layout.addLayout(
             dst_buttons_layout
+        )
+
+        self.dstIdControlsLayout = QHBoxLayout()
+
+        self.dstIdControlsLayout.setContentsMargins(
+            0, 0, 0, 0
+        )
+
+        self.dstIdControlsLayout.setSpacing(
+            12
+        )
+
+        self.dstIdControlsLabel = QLabel(
+            "IDs:"
+        )
+
+        self.dstIdControlsLayout.addWidget(
+            self.dstIdControlsLabel
+        )
+
+        self.dstIdControlsLayout.addStretch()
+
+        to_layout.addLayout(
+            self.dstIdControlsLayout
         )
 
         self.clearSrcArtsButton.setMinimumWidth(100)
@@ -130,15 +177,37 @@ class CopyArtsPage(QWidget):
         # ==================================================
         # === Buttons (row 3) ==============================
         # ==================================================
-        # self.removeArtNumbers = QPushButton("Remove article numbers")
+        self.removeAvailableArtsButton = QPushButton("Remove selected")
+        self.clearAvailableArtsButton = QPushButton("Clear")
         self.copyAndRenameButton = QPushButton("Copy and rename")
         self.fiveDModeCheckbox = QCheckBox("5D mode")
 
-#         main_layout.addWidget(self.removeArtNumbers, 3, 0)
-        main_layout.addWidget(self.copyAndRenameButton, 3, 1)
+        bottom_layout = QHBoxLayout()
 
-        main_layout.addWidget(self.fiveDModeCheckbox, 3, 0)
-        main_layout.addWidget(self.copyAndRenameButton, 3, 1)
+        bottom_layout.addWidget(
+            self.removeAvailableArtsButton
+        )
+
+        bottom_layout.addWidget(
+            self.clearAvailableArtsButton
+        )
+
+        bottom_layout.addStretch()
+
+        bottom_layout.addWidget(
+            self.fiveDModeCheckbox
+        )
+
+        bottom_layout.addStretch()
+
+        bottom_layout.addWidget(
+            self.copyAndRenameButton
+        )
+
+        main_layout.addLayout(
+            bottom_layout,
+            3, 0, 1, 2,
+        )
 
         # ==================================================
         # === Stretch settings =============================
@@ -164,9 +233,159 @@ class CopyArtsPage(QWidget):
             "5DMode": self.fiveDModeCheckbox,
         }
 
+    def on_src_master_clicked(
+            self,
+            checked: bool,
+    ) -> None:
+        state = (
+            Qt.Checked
+            if checked
+            else Qt.Unchecked
+        )
+
+        self.srcArtsTree.set_all_check_state(
+            state
+        )
+
+        self.update_src_master_checkbox()
+
+    def update_src_master_checkbox(
+            self,
+    ) -> None:
+        state = (
+            self.srcArtsTree
+            .get_overall_check_state()
+        )
+
+        self.srcMasterCheckbox.blockSignals(
+            True
+        )
+
+        self.srcMasterCheckbox.setCheckState(
+            state
+        )
+
+        self.srcMasterCheckbox.blockSignals(
+            False
+        )
+
+    def on_dst_master_clicked(
+            self,
+            checked: bool,
+    ) -> None:
+        state = (
+            Qt.Checked
+            if checked
+            else Qt.Unchecked
+        )
+
+        self.dstArtsTree.set_all_check_state(
+            state
+        )
+
+        self.update_dst_master_checkbox()
+
+    def update_dst_master_checkbox(
+            self,
+    ) -> None:
+        state = (
+            self.dstArtsTree
+            .get_overall_check_state()
+        )
+
+        self.dstMasterCheckbox.blockSignals(
+            True
+        )
+
+        self.dstMasterCheckbox.setCheckState(
+            state
+        )
+
+        self.dstMasterCheckbox.blockSignals(
+            False
+        )
+
+    def rebuild_dst_id_controls(
+            self,
+    ) -> None:
+
+        # Удаляем старые динамические checkbox'ы
+        for checkbox in self.dstIdCheckboxes.values():
+            self.dstIdControlsLayout.removeWidget(
+                checkbox
+            )
+
+            checkbox.deleteLater()
+
+        self.dstIdCheckboxes.clear()
+
+        # Получаем union всех ID из destination ART
+        id_names = (
+            self.dstArtsTree
+            .get_available_id_names()
+        )
+
+        for id_name in id_names:
+            checkbox = QCheckBox(
+                id_name
+            )
+
+            checkbox.setTristate(
+                True
+            )
+
+            checkbox.stateChanged.connect(
+                self.on_dst_id_checkbox_changed
+            )
+
+            checkbox.setCheckState(
+                self.dstArtsTree.get_id_check_state(
+                    id_name
+                )
+            )
+
+            self.dstIdControlsLayout.insertWidget(
+                self.dstIdControlsLayout.count() - 1,
+                checkbox,
+            )
+
+            self.dstIdCheckboxes[
+                id_name
+            ] = checkbox
+
+    def on_dst_id_checkbox_changed(
+            self,
+            state: int,
+    ) -> None:
+
+        checkbox = self.sender()
+
+        if not isinstance(
+                checkbox,
+                QCheckBox,
+        ):
+            return
+
+        id_name = checkbox.text()
+
+        if state == Qt.Checked:
+            checked = True
+
+        elif state == Qt.Unchecked:
+            checked = False
+
+        else:
+            return
+
+        self.dstArtsTree.set_id_checked(
+            id_name,
+            checked,
+        )
+
     def on_load_arts_clicked(self):
         self.loadArtsRequested.emit(self.current_directory)
 
     def on_copy_and_rename_clicked(self):
         self.copyAndRenameRequested.emit()
+
 
