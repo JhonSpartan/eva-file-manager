@@ -6,6 +6,13 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal
 from widgets.arts_tree import ArtsTree, ArtsTreeMode
 
+class TriStateControlCheckBox(QCheckBox):
+    def nextCheckState(self) -> None:
+        if self.checkState() == Qt.Checked:
+            self.setCheckState(Qt.Unchecked)
+        else:
+            self.setCheckState(Qt.Checked)
+
 
 class CopyArtsPage(QWidget):
 
@@ -33,6 +40,7 @@ class CopyArtsPage(QWidget):
         self.srcArtsTree.checkStateChanged.connect(self.update_src_master_checkbox)
         self.dstMasterCheckbox.clicked.connect(self.on_dst_master_clicked)
         self.dstArtsTree.checkStateChanged.connect(self.update_dst_master_checkbox)
+        self.dstArtsTree.checkStateChanged.connect(self.update_dst_id_checkboxes)
         self.dstArtsTree.artsChanged.connect(self.rebuild_dst_id_controls)
 
     def setup_ui(self):
@@ -326,7 +334,7 @@ class CopyArtsPage(QWidget):
         )
 
         for id_name in id_names:
-            checkbox = QCheckBox(
+            checkbox = TriStateControlCheckBox(
                 id_name
             )
 
@@ -377,10 +385,40 @@ class CopyArtsPage(QWidget):
         else:
             return
 
-        self.dstArtsTree.set_id_checked(
-            id_name,
-            checked,
-        )
+        checkbox.blockSignals(True)
+
+        try:
+
+            self.dstArtsTree.set_id_checked(
+                id_name,
+                checked,
+            )
+
+        finally:
+            checkbox.blockSignals(False)
+
+    def update_dst_id_checkboxes(
+            self,
+    ) -> None:
+
+        for id_name, checkbox in (
+                self.dstIdCheckboxes.items()
+        ):
+            state = (
+                self.dstArtsTree
+                .get_id_check_state(id_name)
+            )
+
+            checkbox.blockSignals(True)
+
+            try:
+                checkbox.setCheckState(
+                    state
+                )
+
+            finally:
+                checkbox.blockSignals(False)
+
 
     def on_load_arts_clicked(self):
         self.loadArtsRequested.emit(self.current_directory)

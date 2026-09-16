@@ -241,6 +241,9 @@ class ArtsTree(QTreeWidget):
             for path in paths:
                 self._remove_art(Path(path))
 
+            self.artsChanged.emit()
+            self.checkStateChanged.emit()
+
     def dropEvent(self, event):
         if not event.mimeData().hasFormat(ART_MIME_TYPE):
             event.ignore()
@@ -295,6 +298,9 @@ class ArtsTree(QTreeWidget):
 
         for art_path in new_arts:
             self.add_art(art_path)
+
+        self.artsChanged.emit()
+        self.checkStateChanged.emit()
 
         self.artsChanged.emit()
 
@@ -464,6 +470,8 @@ class ArtsTree(QTreeWidget):
         finally:
             self.blockSignals(False)
 
+        self.checkStateChanged.emit()
+
     def get_overall_check_state(
             self,
     ) -> Qt.CheckState:
@@ -625,3 +633,4 @@ class ArtsTree(QTreeWidget):
             return Qt.Unchecked
 
         return Qt.PartiallyChecked
+
