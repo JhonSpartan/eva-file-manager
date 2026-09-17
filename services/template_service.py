@@ -87,7 +87,7 @@ class TemplateService:
                             folder_id=folder_id,
                             template_name=new_name,
                             origin=TemplateOrigin.STOPPER,
-                            selected=True,
+                            selected=False,
                             stopper_combination=combination,
                         )
                     )

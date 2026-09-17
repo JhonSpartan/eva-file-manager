@@ -24,6 +24,6 @@ if __name__ == "__main__":
         )
 
     window = MainWindow()
-    window.show()
+    window.showMaximized()
 
     sys.exit(app.exec())

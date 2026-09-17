@@ -169,14 +169,22 @@ class MainWindow(QMainWindow):
         # === Progress bar default value ===
         self.index = 0
 
+        self.eva_page = EvaPage()
+        self.ui.stacked_widget.addWidget(self.eva_page)
+
         self.copy_page = CopyArtsPage()
         self.ui.stacked_widget.addWidget(self.copy_page)
 
         self.edit_page = EditFilesPage()
         self.ui.stacked_widget.addWidget(self.edit_page)
 
-        self.eva_page = EvaPage()
-        self.ui.stacked_widget.addWidget(self.eva_page)
+        self.database_page = DatabasePage()
+        self.ui.stacked_widget.addWidget(self.database_page)
+
+        self.ui.stacked_widget.setCurrentWidget(
+            self.eva_page
+        )
+        self.ui.btn_eva.setChecked(True)
 
         self.five_d_mode = False
 
@@ -225,8 +233,6 @@ class MainWindow(QMainWindow):
             validator=self.stopper_validator,
         )
 
-        self.database_page = DatabasePage()
-        self.ui.stacked_widget.addWidget(self.database_page)
         self.load_template_database_table()
         self.load_stopper_database_table()
         self.load_copy_rules_database_table()
@@ -455,6 +461,9 @@ class MainWindow(QMainWindow):
         self.edit_page.editFilesPbar.setValue(0)
         # рендерим
         self.render_files(file_paths)
+        self.filter_files(
+            self.edit_page.find_input.text()
+        )
 
     def render_files(self, file_paths: list[Path]):
 
@@ -2318,6 +2327,8 @@ class MainWindow(QMainWindow):
             working_list.addItem(item)
 
         self.sync_files_to_rename_from_ui()
+
+        self.edit_page.editFilesPbar.setValue(0)
 
     def on_export_source_requested(self) -> None:
 

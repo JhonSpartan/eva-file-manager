@@ -17,18 +17,16 @@ class ArtService:
         if not children:
             return []
 
-        first = children[0]
-
-        if self._contains_dxf(first):
-            return children
-
         arts = []
 
-        for eva in children:
-            arts.extend(
-                art for art in eva.iterdir()
-                if art.is_dir()
-            )
+        for child in children:
+            if self._contains_dxf(child):
+                arts.append(child)
+                continue
+
+            for art in child.iterdir():
+                if art.is_dir() and self._contains_dxf(art):
+                    arts.append(art)
 
         return arts
 

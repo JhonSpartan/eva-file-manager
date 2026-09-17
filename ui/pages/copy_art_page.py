@@ -36,8 +36,6 @@ class CopyArtsPage(QWidget):
         self.clearDstArtsButton.clicked.connect(self.dstArtsTree.clear_tree)
         self.removeAvailableArtsButton.clicked.connect(self.artsTree.remove_selected_arts)
         self.clearAvailableArtsButton.clicked.connect(self.artsTree.clear_tree)
-        self.srcMasterCheckbox.clicked.connect(self.on_src_master_clicked)
-        self.srcArtsTree.checkStateChanged.connect(self.update_src_master_checkbox)
         self.dstMasterCheckbox.clicked.connect(self.on_dst_master_clicked)
         self.dstArtsTree.checkStateChanged.connect(self.update_dst_master_checkbox)
         self.dstArtsTree.checkStateChanged.connect(self.update_dst_id_checkboxes)
@@ -102,9 +100,6 @@ class CopyArtsPage(QWidget):
         # === Tree controls ===
         self.clearSrcArtsButton = QPushButton("Clear")
 
-        self.srcMasterCheckbox = QCheckBox("Select all")
-        self.srcMasterCheckbox.setTristate(True)
-
         self.removeDstArtsButton = QPushButton("Remove selected")
         self.clearDstArtsButton = QPushButton("Clear")
 
@@ -119,10 +114,6 @@ class CopyArtsPage(QWidget):
         )
 
         src_buttons_layout.addStretch()
-
-        src_buttons_layout.addWidget(
-            self.srcMasterCheckbox
-        )
 
         from_layout.addLayout(
             src_buttons_layout
@@ -240,42 +231,6 @@ class CopyArtsPage(QWidget):
             "progress": self.copyAndRenamePbar,
             "5DMode": self.fiveDModeCheckbox,
         }
-
-    def on_src_master_clicked(
-            self,
-            checked: bool,
-    ) -> None:
-        state = (
-            Qt.Checked
-            if checked
-            else Qt.Unchecked
-        )
-
-        self.srcArtsTree.set_all_check_state(
-            state
-        )
-
-        self.update_src_master_checkbox()
-
-    def update_src_master_checkbox(
-            self,
-    ) -> None:
-        state = (
-            self.srcArtsTree
-            .get_overall_check_state()
-        )
-
-        self.srcMasterCheckbox.blockSignals(
-            True
-        )
-
-        self.srcMasterCheckbox.setCheckState(
-            state
-        )
-
-        self.srcMasterCheckbox.blockSignals(
-            False
-        )
 
     def on_dst_master_clicked(
             self,

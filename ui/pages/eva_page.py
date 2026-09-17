@@ -341,19 +341,20 @@ class EvaPage(QWidget):
                     checkbox
                 )
 
-                if template.origin == TemplateOrigin.STOPPER:
+                if template.origin == TemplateOrigin.CUSTOM:
                     badge = self.create_template_badge(
-                        "S",
-                        "Stopper",
+                        "C",
+                        "Custom",
                     )
 
                     template_layout.addWidget(
                         badge
                     )
-                elif template.origin == TemplateOrigin.CUSTOM:
+
+                if template.stopper_combination is not None:
                     badge = self.create_template_badge(
-                        "C",
-                        "Custom",
+                        "S",
+                        "Stopper",
                     )
 
                     template_layout.addWidget(
