@@ -8,6 +8,10 @@ class ArtService:
         if not root.exists():
             raise ValueError("Directory does not exist")
 
+        # Если выбран непосредственно ART
+        if self._contains_dxf(root):
+            return [root]
+
         children = [p for p in root.iterdir() if p.is_dir()]
 
         if not children:
@@ -38,3 +42,5 @@ class ArtService:
                 return True
 
         return False
+
+

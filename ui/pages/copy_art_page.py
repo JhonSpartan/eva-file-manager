@@ -376,10 +376,10 @@ class CopyArtsPage(QWidget):
 
         id_name = checkbox.text()
 
-        if state == Qt.Checked:
+        if state == 2:
             checked = True
 
-        elif state == Qt.Unchecked:
+        elif state == 0:
             checked = False
 
         else:
@@ -388,7 +388,6 @@ class CopyArtsPage(QWidget):
         checkbox.blockSignals(True)
 
         try:
-
             self.dstArtsTree.set_id_checked(
                 id_name,
                 checked,
