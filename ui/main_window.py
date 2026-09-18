@@ -1202,13 +1202,26 @@ class MainWindow(QMainWindow):
                 for issue in validation.create_id_issues
             )
 
-            answer = QMessageBox.question(
-                self,
-                "Create missing IDs",
-                message + "\n\nCreate missing IDs and continue?",
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No,
+            dialog = QMessageBox(self)
+            dialog.setWindowTitle("Create missing IDs")
+            dialog.setIcon(QMessageBox.Question)
+
+            dialog.setText(
+                f"{len(validation.create_id_issues)} missing ID(s) found."
             )
+
+            dialog.setInformativeText(
+                "Create missing IDs and continue?"
+            )
+
+            dialog.setDetailedText(message)
+
+            dialog.setStandardButtons(
+                QMessageBox.Yes | QMessageBox.No
+            )
+            dialog.setDefaultButton(QMessageBox.No)
+
+            answer = dialog.exec()
 
             if answer != QMessageBox.Yes:
                 return
@@ -1246,11 +1259,17 @@ class MainWindow(QMainWindow):
             dialog.setIcon(
                 QMessageBox.Warning
             )
+
             dialog.setText(
-                message
+                f"{len(unselected_id_issues)} destination ID(s) are not selected."
             )
+
             dialog.setInformativeText(
-                "Some matching destination IDs are not selected."
+                "These IDs will be skipped during copying."
+            )
+
+            dialog.setDetailedText(
+                message
             )
 
             skip_button = dialog.addButton(
