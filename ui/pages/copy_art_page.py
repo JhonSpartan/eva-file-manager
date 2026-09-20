@@ -17,6 +17,7 @@ class TriStateControlCheckBox(QCheckBox):
 class CopyArtsPage(QWidget):
 
     loadArtsRequested = Signal(str)
+    addArtsRequested = Signal(str)
     copyAndRenameRequested = Signal()
 
     def __init__(self, parent=None):
@@ -30,6 +31,7 @@ class CopyArtsPage(QWidget):
 
     def setup_connections(self):
         self.load_arts_btn.clicked.connect(self.on_load_arts_clicked)
+        self.add_arts_btn.clicked.connect(self.on_add_arts_clicked)
         self.copyAndRenameButton.clicked.connect(self.on_copy_and_rename_clicked)
         self.clearSrcArtsButton.clicked.connect(self.srcArtsTree.clear_tree)
         self.removeDstArtsButton.clicked.connect(self.dstArtsTree.remove_selected_arts)
@@ -45,14 +47,16 @@ class CopyArtsPage(QWidget):
         main_layout = QGridLayout(self)
 
         # === Source directory (row 0, full width) ===
-        source_group = QGroupBox("Source directory")
+        source_group = QGroupBox("Исходная папка")
         source_layout = QHBoxLayout(source_group)
 
         self.source_dir_input = QLineEdit()
-        self.load_arts_btn = QPushButton("Load files")
+        self.load_arts_btn = QPushButton("Перезагрузить артикулы")
+        self.add_arts_btn = QPushButton("Добавить артикулы")
 
         source_layout.addWidget(self.source_dir_input)
         source_layout.addWidget(self.load_arts_btn)
+        source_layout.addWidget(self.add_arts_btn)
 
         main_layout.addWidget(source_group, 0, 0, 1, 2)
 
@@ -63,7 +67,7 @@ class CopyArtsPage(QWidget):
         # ---------- LEFT COLUMN ----------
         left_column = QVBoxLayout()
 
-        all_articles_group = QGroupBox("Choose article numbers")
+        all_articles_group = QGroupBox("Доступные артикулы")
         all_articles_layout = QVBoxLayout(all_articles_group)
 
         self.artsTree = ArtsTree(ArtsTreeMode.AVAILABLE)
@@ -77,7 +81,7 @@ class CopyArtsPage(QWidget):
         right_column = QVBoxLayout()
 
         # --- FROM ---
-        from_group = QGroupBox("Article numbers to copy from")
+        from_group = QGroupBox("Артикулы-источники")
         from_layout = QVBoxLayout(from_group)
 
         self.srcArtsTree = ArtsTree(ArtsTreeMode.SOURCE)
@@ -85,7 +89,7 @@ class CopyArtsPage(QWidget):
         from_layout.addWidget(self.srcArtsTree)
 
         # --- TO ---
-        to_group = QGroupBox("Article numbers to copy to")
+        to_group = QGroupBox("Целевые артикулы")
         to_layout = QVBoxLayout(to_group)
 
         self.dstArtsTree = ArtsTree(ArtsTreeMode.DESTINATION)
@@ -98,12 +102,12 @@ class CopyArtsPage(QWidget):
         main_layout.addLayout(right_column, 1, 1)
 
         # === Tree controls ===
-        self.clearSrcArtsButton = QPushButton("Clear")
+        self.clearSrcArtsButton = QPushButton("Очистить")
 
-        self.removeDstArtsButton = QPushButton("Remove selected")
-        self.clearDstArtsButton = QPushButton("Clear")
+        self.removeDstArtsButton = QPushButton("Удалить выбранные")
+        self.clearDstArtsButton = QPushButton("Очистить")
 
-        self.dstMasterCheckbox = QCheckBox("Select all")
+        self.dstMasterCheckbox = QCheckBox("Выбрать всё")
         self.dstMasterCheckbox.setTristate(True)
 
 
@@ -150,7 +154,7 @@ class CopyArtsPage(QWidget):
         )
 
         self.dstIdControlsLabel = QLabel(
-            "IDs:"
+            "ID:"
         )
 
         self.dstIdControlsLayout.addWidget(
@@ -176,10 +180,10 @@ class CopyArtsPage(QWidget):
         # ==================================================
         # === Buttons (row 3) ==============================
         # ==================================================
-        self.removeAvailableArtsButton = QPushButton("Remove selected")
-        self.clearAvailableArtsButton = QPushButton("Clear")
-        self.copyAndRenameButton = QPushButton("Copy and rename")
-        self.fiveDModeCheckbox = QCheckBox("5D mode")
+        self.removeAvailableArtsButton = QPushButton("Удалить выбранные")
+        self.clearAvailableArtsButton = QPushButton("Очистить")
+        self.copyAndRenameButton = QPushButton("Копировать и переименовать")
+        self.fiveDModeCheckbox = QCheckBox("Режим 5D")
 
         bottom_layout = QHBoxLayout()
 
@@ -376,6 +380,9 @@ class CopyArtsPage(QWidget):
 
     def on_load_arts_clicked(self):
         self.loadArtsRequested.emit(self.current_directory)
+
+    def on_add_arts_clicked(self):
+        self.addArtsRequested.emit(self.current_directory)
 
     def on_copy_and_rename_clicked(self):
         self.copyAndRenameRequested.emit()

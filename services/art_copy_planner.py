@@ -73,6 +73,9 @@ class ArtCopyPlanner:
             )
 
             if destination_id_path is None:
+                if destination.art_state != SelectionState.FULL:
+                    continue
+
                 plan.ids_to_create.append(
                     destination_id_name
                 )

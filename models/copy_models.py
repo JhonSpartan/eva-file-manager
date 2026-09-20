@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 from enum import Enum, auto
+from PySide6.QtCore import Qt
 
 class SelectionState(Enum):
     NONE = 0
@@ -10,6 +11,7 @@ class SelectionState(Enum):
 @dataclass
 class ArtSelection:
     art_path: Path
+    art_state: SelectionState = SelectionState.NONE
     id_states: dict[Path, SelectionState] = field(default_factory=dict)
     files_by_id: dict[Path, list[Path]] = field(default_factory=dict)
 

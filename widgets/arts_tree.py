@@ -319,6 +319,13 @@ class ArtsTree(QTreeWidget):
             if not isinstance(art_path, Path):
                 continue
 
+            if art_item.checkState(0) == Qt.Checked:
+                art_state = SelectionState.FULL
+            elif art_item.checkState(0) == Qt.PartiallyChecked:
+                art_state = SelectionState.PARTIAL
+            else:
+                art_state = SelectionState.NONE
+
             id_states = {}
             files_by_id = {}
 
@@ -350,6 +357,7 @@ class ArtsTree(QTreeWidget):
             selections.append(
                 ArtSelection(
                     art_path=art_path,
+                    art_state=art_state,
                     id_states=id_states,
                     files_by_id=files_by_id,
                 )

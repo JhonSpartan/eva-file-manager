@@ -69,6 +69,18 @@ class PathDialog(BaseDialog):
             | QDialogButtonBox.Cancel
         )
 
+        self.buttons.button(
+            QDialogButtonBox.Ok
+        ).setText(
+            "ОК"
+        )
+
+        self.buttons.button(
+            QDialogButtonBox.Cancel
+        ).setText(
+            "Отмена"
+        )
+
         layout.addWidget(self.buttons)
 
         self.browse_btn.clicked.connect(

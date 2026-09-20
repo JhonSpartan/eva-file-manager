@@ -18,7 +18,7 @@ class MoveToIdDialog(BaseDialog):
     ):
         super().__init__(parent)
 
-        self.setWindowTitle("Move to ID")
+        self.setWindowTitle("Перемещение в ID")
         self.setModal(True)
 
         self.setup_ui()
@@ -29,7 +29,7 @@ class MoveToIdDialog(BaseDialog):
         main_layout = QVBoxLayout(self)
 
         main_layout.addWidget(
-            QLabel("Destination ID")
+            QLabel("Целевой ID")
         )
 
         self.id_input = QSpinBox()
@@ -44,11 +44,11 @@ class MoveToIdDialog(BaseDialog):
         buttons_layout.addStretch()
 
         self.cancel_btn = QPushButton(
-            "Cancel"
+            "Отмена"
         )
 
         self.execute_btn = QPushButton(
-            "Execute"
+            "Выполнить"
         )
 
         buttons_layout.addWidget(

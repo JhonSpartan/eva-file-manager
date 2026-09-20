@@ -24,9 +24,9 @@ class StopperDialog(BaseDialog):
         super().__init__(parent)
 
         self.setWindowTitle(
-            "Edit stopper"
+            "Изменить стопер"
             if diameter is not None
-            else "Add stopper"
+            else "Добавить стопер"
         )
 
         self.setup_ui()
@@ -49,12 +49,12 @@ class StopperDialog(BaseDialog):
         self.stopper_name_input = QLineEdit()
 
         form_layout.addRow(
-            "Stopper diameter:",
+            "Диаметр стопера:",
             self.diameter_input,
         )
 
         form_layout.addRow(
-            "Stopper name:",
+            "Название стопера:",
             self.stopper_name_input,
         )
 
@@ -63,8 +63,8 @@ class StopperDialog(BaseDialog):
         buttons_layout = QHBoxLayout()
         buttons_layout.addStretch()
 
-        self.cancel_button = QPushButton("Cancel")
-        self.save_button = QPushButton("Save")
+        self.cancel_button = QPushButton("Отмена")
+        self.save_button = QPushButton("Сохранить")
 
         buttons_layout.addWidget(
             self.cancel_button
@@ -100,24 +100,24 @@ class StopperDialog(BaseDialog):
         if not diameter:
             QMessageBox.warning(
                 self,
-                "Invalid data",
-                "Diameter is required.",
+                "Некорректные данные",
+                "Укажите диаметр.",
             )
             return
 
         if not self._is_float(diameter):
             QMessageBox.warning(
                 self,
-                "Invalid data",
-                "Diameter must be a number.",
+                "Некорректные данные",
+                "Диаметр должен быть числом.",
             )
             return
 
         if not stopper_name:
             QMessageBox.warning(
                 self,
-                "Invalid data",
-                "Stopper name is required.",
+                "Некорректные данные",
+                "Укажите название стопера.",
             )
             return
 

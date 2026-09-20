@@ -22,7 +22,7 @@ class StopperActionsDialog(BaseDialog):
     ):
         super().__init__(parent)
 
-        self.setWindowTitle("Stoppers")
+        self.setWindowTitle("Стоперы")
         self.setModal(True)
 
         self.stopper = stopper
@@ -36,27 +36,27 @@ class StopperActionsDialog(BaseDialog):
 
         main_layout.addWidget(
             QLabel(
-                f"Stopper: {self.stopper.stopper_name}"
+                f"Стопер: {self.stopper.stopper_name}"
             )
         )
 
         main_layout.addWidget(
             QLabel(
-                f"Current diameter: "
-                f"{self.stopper.diameter} mm"
+                f"Текущий диаметр: "
+                f"{self.stopper.diameter} мм"
             )
         )
 
         main_layout.addWidget(
-            QLabel("Action")
+            QLabel("Действие")
         )
 
         self.change_diameter_radio = QRadioButton(
-            "Change diameter"
+            "Изменить диаметр"
         )
 
         self.delete_stoppers_radio = QRadioButton(
-            "Delete stoppers"
+            "Удалить стоперы"
         )
 
         self.change_diameter_radio.setChecked(
@@ -72,7 +72,7 @@ class StopperActionsDialog(BaseDialog):
         )
 
         main_layout.addWidget(
-            QLabel("New diameter")
+            QLabel("Новый диаметр")
         )
 
         diameter_layout = QHBoxLayout()
@@ -84,7 +84,7 @@ class StopperActionsDialog(BaseDialog):
         )
 
         diameter_layout.addWidget(
-            QLabel("mm")
+            QLabel("мм")
         )
 
         main_layout.addLayout(
@@ -95,11 +95,11 @@ class StopperActionsDialog(BaseDialog):
         buttons_layout.addStretch()
 
         self.cancel_btn = QPushButton(
-            "Cancel"
+            "Отмена"
         )
 
         self.continue_btn = QPushButton(
-            "Continue"
+            "Продолжить"
         )
 
         buttons_layout.addWidget(
@@ -178,8 +178,8 @@ class StopperActionsDialog(BaseDialog):
         if not text:
             QMessageBox.warning(
                 self,
-                "Stoppers",
-                "New diameter is empty.",
+                "Стоперы",
+                "Укажите новый диаметр.",
             )
             return
 
@@ -191,16 +191,16 @@ class StopperActionsDialog(BaseDialog):
         except ValueError:
             QMessageBox.warning(
                 self,
-                "Stoppers",
-                "Invalid diameter.",
+                "Стоперы",
+                "Некорректный диаметр.",
             )
             return
 
         if diameter <= 0:
             QMessageBox.warning(
                 self,
-                "Stoppers",
-                "Diameter must be greater than zero.",
+                "Стоперы",
+                "Диаметр должен быть больше нуля.",
             )
             return
 

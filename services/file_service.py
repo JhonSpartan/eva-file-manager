@@ -15,7 +15,7 @@ class FileService:
         path = Path(directory)
 
         if not path.exists():
-            raise ValueError("Directory does not exist")
+            raise ValueError("Папка не существует")
 
 
         dxf_files = [f for f in path.rglob("*.dxf") if f.is_file()]
@@ -65,7 +65,7 @@ class FileService:
 
         # ожидаем структуру: EVA / ART / ID / file.dxf
         if len(file.parents) < 3:
-            result.errors.append(f"Unexpected folder depth: {file}")
+            result.errors.append(f"Некорректная глубина папок: {file}")
             return self._file_result(file, new_file, False)
 
         file_id = file.parent.name
@@ -76,27 +76,27 @@ class FileService:
         ext = file.suffix.lower()
 
         if ext != ".dxf":
-            result.errors.append(f"Not a .dxf file detected: {file}")
+            result.errors.append(f"Обнаружен файл не в формате .dxf: {file}")
             return self._file_result(file, new_file, False)
 
         if any(ch in name for ch in "óąśłźż"):
-            result.errors.append(f"Polish letter in {file}")
+            result.errors.append(f"Польская буква в файле {file}")
 
         split_name = name.split("_")
 
         if len(split_name) <= 2 or split_name[2] != file_id:
             split_name[2:3] = [file_id]
-            result.errors.append(f"Wrong id in {file}")
+            result.errors.append(f"Некорректный ID в файле {file}")
             need_rename = True
 
         if len(split_name) <= 1 or split_name[1] != file_art:
             split_name[1:2] = [file_art]
-            result.errors.append(f"Wrong art in {file}")
+            result.errors.append(f"Некорректный ART в файле {file}")
             need_rename = True
 
         if len(split_name) > 0 and split_name[0] != file_eva:
             split_name[0] = file_eva
-            result.errors.append(f"Wrong EVA in {file}")
+            result.errors.append(f"Некорректная EVA в файле {file}")
             need_rename = True
 
         rename_inner_res = self.rename_inner(file, file_art, name, file_id)
@@ -114,9 +114,9 @@ class FileService:
                 renamed = True
                 result.renamed_files += 1
             except FileExistsError:
-                result.errors.append(f"Rename target exists: {new_file}")
+                result.errors.append(f"Целевой файл уже существует: {new_file}")
             except Exception as e:
-                result.errors.append(f"Rename error for {file}: {e}")
+                result.errors.append(f"Ошибка переименования файла {file}: {e}")
 
         return self._file_result(file, new_file, renamed)
 
@@ -128,10 +128,10 @@ class FileService:
             msp = doc.modelspace()
             layers = doc.layers
         except IOError:
-            print(f"Could not read the file: {new_file_path}")
+            print(f"Не удалось прочитать файл: {new_file_path}")
             return 0
         except ezdxf.DXFStructureError:
-            print(f"Invalid DXF structure: {new_file_path}")
+            print(f"Некорректная структура DXF: {new_file_path}")
             return 0
 
         layer_name = "nadpis"
@@ -231,14 +231,14 @@ class FileService:
         try:
             doc.layers.remove(layer_to_remove)
         except ValueError:
-            # Layer doesn't exist — ignore
+            # Слой не существует — игнорируем
             pass
 
     def save_file(self, doc, new_file_path):
         try:
             doc.save()
         except Exception as e:
-            print(f"Error saving {new_file_path}: {e}")
+            print(f"Ошибка сохранения файла {new_file_path}: {e}")
 
     def log_errors(self, log_path, logs):
         log_path.mkdir(parents=True, exist_ok=True)
@@ -264,8 +264,8 @@ class FileService:
             renamed = True
             result.renamed += 1
         except FileExistsError:
-            result.skipped.append(f"Rename target exists: {new_file}")
+            result.skipped.append(f"Целевой файл уже существует: {new_file}")
         except Exception as e:
-            result.failed.append(f"{new_file} (Error: {e})")
+            result.failed.append(f"{new_file} (Ошибка: {e})")
 
         return self._file_result(file, new_file, renamed)

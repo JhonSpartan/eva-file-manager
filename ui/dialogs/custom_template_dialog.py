@@ -28,7 +28,7 @@ class CustomTemplateDialog(BaseDialog):
         self.created_templates: list[SessionTemplate] = []
 
         self.setWindowTitle(
-            "Custom templates"
+            "Пользовательские шаблоны"
         )
 
         layout = QVBoxLayout(self)
@@ -81,7 +81,7 @@ class CustomTemplateDialog(BaseDialog):
         )
 
         self.confirm_button = QPushButton(
-            "Добавить custom-шаблоны"
+            "Добавить пользовательские шаблоны"
         )
 
         layout.addWidget(
@@ -150,7 +150,7 @@ class CustomTemplateDialog(BaseDialog):
             QIcon("resources/icons/delete.svg")
         )
         delete_button.setToolTip(
-            "Remove template"
+            "Удалить шаблон"
         )
 
         row_layout.addWidget(

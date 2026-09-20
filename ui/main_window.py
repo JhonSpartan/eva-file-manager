@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QStackedWidget, QMessageBox, QFileDialog, QListWidgetItem, QTreeWidgetItem, QAbstractItemView, QDialog
 )
 from PySide6.QtGui import QFont, QIcon, QDesktopServices
-from PySide6.QtCore import Qt, QUrl, QThread
+from PySide6.QtCore import Qt, QUrl, QThread, QSettings, QTimer
 
 import pathlib
 from pathlib import Path
@@ -49,7 +49,6 @@ from workers.move_to_id_worker import MoveToIdWorker
 from workers.stopper_worker import StopperWorker
 from workers.sync_worker import SyncWorker
 
-
 from database.database import Database
 from database.cloud_database import CloudDatabase
 
@@ -71,7 +70,7 @@ from services.stopper_validator import StopperValidator
 
 class Ui_MainWindow:
     def setup_ui(self, MainWindow):
-        MainWindow.setWindowTitle("EVA Configurator")
+        MainWindow.setWindowTitle("Конфигуратор EVA")
         MainWindow.resize(950, 700)
 
         # === Центральный виджет ===
@@ -102,9 +101,9 @@ class Ui_MainWindow:
         )
 
         self.btn_eva = QPushButton("EVA")
-        self.btn_other1 = QPushButton("Другая страница 1")
-        self.btn_other2 = QPushButton("Другая страница 2")
-        self.btn_other3 = QPushButton("Другая страница 3")
+        self.btn_other1 = QPushButton("Работа с артикулами")
+        self.btn_other2 = QPushButton("Работа с файлами")
+        self.btn_other3 = QPushButton("База данных")
 
         for btn in (
                 self.btn_eva,
@@ -120,6 +119,7 @@ class Ui_MainWindow:
         self.side_menu.addStretch()
 
         self.btn_exit = QPushButton("Выход")
+        self.btn_exit.setObjectName("exitButton")
         self.btn_exit.setMinimumHeight(40)
 
         self.side_menu.addWidget(
@@ -144,7 +144,6 @@ class Ui_MainWindow:
         self.stacked_widget.addWidget(self.page_other2)
 
         self.setup_styles()
-
 
     def setup_styles(self):
         font = QFont()
@@ -193,6 +192,20 @@ class MainWindow(QMainWindow):
         self.files_to_rename: list[Path] = []
 
         self.files_for_replace: list[Path] = []
+
+        self.settings = QSettings(
+            "FileForge",
+            "FileForge",
+        )
+
+        self.last_directory = self.settings.value(
+            "last_directory",
+            str(Path.home()),
+            type=str,
+        )
+
+        if not Path(self.last_directory).is_dir():
+            self.last_directory = str(Path.home())
 
         self.file_service = FileService()
 
@@ -257,6 +270,9 @@ class MainWindow(QMainWindow):
         self.edit_page.loadFilesRequested.connect(
             self.on_load_files_requested
         )
+        self.edit_page.addFilesRequested.connect(
+            self.on_add_files_requested
+        )
         self.edit_page.renameFilesRequested.connect(
             self.start_rename
         )
@@ -268,6 +284,9 @@ class MainWindow(QMainWindow):
         )
         self.copy_page.loadArtsRequested.connect(
             self.on_load_arts_requested
+        )
+        self.copy_page.addArtsRequested.connect(
+            self.on_add_arts_requested
         )
         self.copy_page.copyAndRenameRequested.connect(
             self.start_copy_art
@@ -301,6 +320,9 @@ class MainWindow(QMainWindow):
         )
         self.eva_page.openLastOutputRequested.connect(
             self.open_eva_last_output
+        )
+        self.eva_page.resetTemplatesRequested.connect(
+            self.on_reset_templates_requested
         )
         self.database_page.editFilesDefaultPathRequested.connect(
             self.edit_files_default_output_path
@@ -422,7 +444,6 @@ class MainWindow(QMainWindow):
             True
         )
 
-
     def load_icons(self):
         self.check_icon = QIcon("resources/icons/check.svg")
 
@@ -431,17 +452,23 @@ class MainWindow(QMainWindow):
         self.sync_worker = None
 
     def on_load_files_requested(self, current_path: str | None):
-        start_dir = current_path if current_path else str(Path.home())
+        start_dir = self.last_directory
 
         directory = QFileDialog.getExistingDirectory(
             self,
-            "Select source directory",
+            "Выберите исходную папку",
             start_dir
         )
 
         if not directory:
             return
 
+        self.last_directory = directory
+
+        self.settings.setValue(
+            "last_directory",
+            directory,
+        )
         # сохраняем состояние
         self.edit_page.current_directory = directory
 
@@ -453,7 +480,7 @@ class MainWindow(QMainWindow):
             file_paths = self.file_service.load_files(directory)
             self.files_to_rename = file_paths
         except ValueError as e:
-            QMessageBox.warning(self, "Error", str(e))
+            QMessageBox.warning(self, "Ошибка", str(e))
             return
 
         self.edit_page.files_to_rename_list.clear()
@@ -461,6 +488,62 @@ class MainWindow(QMainWindow):
         self.edit_page.editFilesPbar.setValue(0)
         # рендерим
         self.render_files(file_paths)
+        self.filter_files(
+            self.edit_page.find_input.text()
+        )
+
+    def on_add_files_requested(
+            self,
+            current_path: str | None,
+    ):
+        start_dir = self.last_directory
+
+        directory = QFileDialog.getExistingDirectory(
+            self,
+            "Выберите исходную папку",
+            start_dir,
+        )
+
+        if not directory:
+            return
+
+        self.last_directory = directory
+
+        self.settings.setValue(
+            "last_directory",
+            directory,
+        )
+
+        try:
+            new_file_paths = self.file_service.load_files(
+                directory
+            )
+        except ValueError as e:
+            QMessageBox.warning(
+                self,
+                "Ошибка",
+                str(e),
+            )
+            return
+
+        existing_paths = set(
+            self.files_to_rename
+        )
+
+        files_to_add = [
+            file_path
+            for file_path in new_file_paths
+            if file_path not in existing_paths
+        ]
+
+        self.files_to_rename.extend(
+            files_to_add
+        )
+
+        self.render_files(
+            files_to_add
+        )
+
         self.filter_files(
             self.edit_page.find_input.text()
         )
@@ -475,17 +558,23 @@ class MainWindow(QMainWindow):
             self.edit_page.files_to_rename_list.addItem(item)
 
     def on_load_arts_requested(self, current_path: str | None):
-        start_dir = current_path if current_path else str(Path.home())
+        start_dir = self.last_directory
 
         directory = QFileDialog.getExistingDirectory(
             self,
-            "Select source directory",
+            "Выберите исходную папку",
             start_dir
         )
 
         if not directory:
             return
 
+        self.last_directory = directory
+
+        self.settings.setValue(
+            "last_directory",
+            directory,
+        )
         # сохраняем состояние
         self.copy_page.current_directory = directory
 
@@ -496,12 +585,67 @@ class MainWindow(QMainWindow):
         try:
             art_paths = self.art_service.load_arts(directory)
         except ValueError as e:
-            QMessageBox.warning(self, "Error", str(e))
+            QMessageBox.warning(self, "Ошибка", str(e))
             return
 
         self.copy_page.copyAndRenamePbar.setValue(0)
 
         self.copy_page.artsTree.load_arts(art_paths)
+
+    def on_add_arts_requested(
+            self,
+            current_path: str | None,
+    ):
+        start_dir = self.last_directory
+
+        directory = QFileDialog.getExistingDirectory(
+            self,
+            "Выберите исходную папку",
+            start_dir,
+        )
+
+        if not directory:
+            return
+
+        self.last_directory = directory
+
+        self.settings.setValue(
+            "last_directory",
+            directory,
+        )
+
+        try:
+            art_paths = self.art_service.load_arts(
+                directory
+            )
+        except ValueError as e:
+            QMessageBox.warning(
+                self,
+                "Ошибка",
+                str(e),
+            )
+            return
+
+        existing_paths = {
+            self.copy_page.artsTree.topLevelItem(index).data(
+                0,
+                Qt.UserRole,
+            )
+            for index in range(
+                self.copy_page.artsTree.topLevelItemCount()
+            )
+        }
+
+        arts_to_add = [
+            art_path
+            for art_path in art_paths
+            if art_path not in existing_paths
+        ]
+
+        for art_path in arts_to_add:
+            self.copy_page.artsTree.add_art(
+                art_path
+            )
 
     def set_processing_state(self, processing: bool):
         self.edit_page.load_files_btn.setEnabled(not processing)
@@ -522,7 +666,7 @@ class MainWindow(QMainWindow):
     def start_rename(self):
         self.set_processing_state(True)
         self.thread = QThread()
-        self.rename_worker  = RenameWorker(self.files_to_rename, self.file_service)
+        self.rename_worker = RenameWorker(self.files_to_rename, self.file_service)
 
         self.rename_worker.moveToThread(self.thread)
 
@@ -562,7 +706,7 @@ class MainWindow(QMainWindow):
     ) -> None:
         QMessageBox.critical(
             self,
-            "Rename failed",
+            "Ошибка переименования",
             error,
         )
 
@@ -573,11 +717,11 @@ class MainWindow(QMainWindow):
         summary = []
 
         if result.renamed_files:
-            summary.append(f"{result.renamed_files} filenames renamed.")
+            summary.append(f"Переименовано файлов: {result.renamed_files}.")
         if result.renamed_layers:
-            summary.append(f'{result.renamed_layers} "nadpis" layers updated.')
+            summary.append(f'Обновлено слоёв "nadpis": {result.renamed_layers}.')
 
-        QMessageBox.information(self, "Done", "\n".join(summary) or "No changes made.")
+        QMessageBox.information(self, "Готово", "\n".join(summary) or "Изменений не внесено.")
         self.files_to_rename.clear()
         self.set_processing_state(False)
 
@@ -642,7 +786,7 @@ class MainWindow(QMainWindow):
 
             QMessageBox.warning(
                 self,
-                "Replace conflict",
+                "Конфликт замены",
                 (
                     "Некоторые целевые файлы уже существуют:\n\n"
                     f"{conflict_names}\n\n"
@@ -654,7 +798,7 @@ class MainWindow(QMainWindow):
         if plan.is_empty:
             QMessageBox.information(
                 self,
-                "Nothing to do",
+                "Нет действий",
                 "Нет файлов для обработки.",
             )
             return
@@ -816,7 +960,7 @@ class MainWindow(QMainWindow):
 
         QMessageBox.information(
             self,
-            "Done",
+            "Готово",
             f"Обработано файлов: {processed_count}",
         )
 
@@ -829,10 +973,9 @@ class MainWindow(QMainWindow):
 
         QMessageBox.critical(
             self,
-            "Replace error",
+            "Ошибка замены",
             message,
         )
-
 
     def start_replace(self, find_text: str, replace_text: str):
         self.files_for_replace.clear()
@@ -867,13 +1010,13 @@ class MainWindow(QMainWindow):
         summary = []
 
         if result.renamed:
-            summary.append(f"{result.renamed} files renamed.")
+            summary.append(f"Переименовано файлов: {result.renamed}.")
         if result.skipped:
-            summary.append(f"Skipped {len(result.skipped)} files:\n" + "\n".join(result.skipped))
+            summary.append(f"Пропущено файлов: {len(result.skipped)}\n" + "\n".join(result.skipped))
         if result.failed:
-            summary.append(f"Failed {len(result.failed)} files:\n" + "\n".join(result.failed))
-        summary = "\n\n".join(summary) if summary else "No changes made."
-        QMessageBox.information(self, "Success", summary)
+            summary.append(f"Ошибок при обработке файлов: {len(result.failed)}\n" + "\n".join(result.failed))
+        summary = "\n\n".join(summary) if summary else "Изменений не внесено."
+        QMessageBox.information(self, "Готово", summary)
 
         self.set_processing_state(False)
 
@@ -904,8 +1047,8 @@ class MainWindow(QMainWindow):
         if not find_text:
             QMessageBox.warning(
                 self,
-                "Stoppers",
-                "Find text is empty.",
+                "Стоперы",
+                "Поле поиска пустое.",
             )
             return
 
@@ -920,8 +1063,8 @@ class MainWindow(QMainWindow):
         if not stopper_name:
             QMessageBox.warning(
                 self,
-                "Stoppers",
-                "Invalid stopper name.",
+                "Стоперы",
+                "Некорректное название стопера.",
             )
             return
 
@@ -934,10 +1077,10 @@ class MainWindow(QMainWindow):
         if stopper is None:
             QMessageBox.warning(
                 self,
-                "Stoppers",
+                "Стоперы",
                 (
-                    "Find text does not match "
-                    "a stopper name from the catalog."
+                    "Текст поиска не соответствует "
+                    "ни одному стоперу из каталога."
                 ),
             )
             return
@@ -973,8 +1116,8 @@ class MainWindow(QMainWindow):
         if not files:
             QMessageBox.information(
                 self,
-                "Stoppers",
-                "No files to process.",
+                "Стоперы",
+                "Нет файлов для обработки.",
             )
             return
 
@@ -1042,11 +1185,11 @@ class MainWindow(QMainWindow):
         if unknown_files:
             QMessageBox.warning(
                 self,
-                "Stoppers",
+                "Стоперы",
                 (
-                    "Some templates were not found "
-                    "in the template catalog.\n\n"
-                    "The stopper operation was cancelled."
+                    "Некоторые шаблоны не найдены "
+                    "в каталоге шаблонов.\n\n"
+                    "Операция со стоперами отменена."
                 ),
             )
             return
@@ -1056,10 +1199,10 @@ class MainWindow(QMainWindow):
         if not files_with_stoppers:
             QMessageBox.information(
                 self,
-                "Stoppers",
+                "Стоперы",
                 (
-                    "The selected templates "
-                    "do not contain stoppers."
+                    "Выбранные шаблоны "
+                    "не содержат стоперов."
                 ),
             )
             return
@@ -1069,12 +1212,11 @@ class MainWindow(QMainWindow):
         if files_without_stoppers:
             answer = QMessageBox.warning(
                 self,
-                "Stoppers",
+                "Стоперы",
                 (
-                    f"{len(files_without_stoppers)} selected "
-                    "file(s) use templates without stoppers.\n\n"
-                    "These files will be skipped.\n\n"
-                    "Continue?"
+                    f"Выбрано файлов без стоперов: {len(files_without_stoppers)}.\n\n"
+                    "Эти файлы будут пропущены.\n\n"
+                    "Продолжить?"
                 ),
                 QMessageBox.Yes
                 | QMessageBox.No,
@@ -1098,11 +1240,11 @@ class MainWindow(QMainWindow):
 
             answer = QMessageBox.question(
                 self,
-                "Change stopper diameter",
+                "Изменение диаметра стопера",
                 (
-                    "Change stopper diameter to "
-                    f"{new_diameter:g} mm?\n\n"
-                    f"Files to modify: {file_count}"
+                    "Изменить диаметр стопера на "
+                    f"{new_diameter:g} мм?\n\n"
+                    f"Файлов для изменения: {file_count}"
                 ),
                 QMessageBox.Yes
                 | QMessageBox.No,
@@ -1126,12 +1268,12 @@ class MainWindow(QMainWindow):
         elif dialog.is_delete_stoppers():
             answer = QMessageBox.warning(
                 self,
-                "Delete stoppers",
+                "Удаление стоперов",
                 (
-                    f"Delete stoppers from "
-                    f"{file_count} files?\n\n"
-                    "DXF files will be modified.\n"
-                    "This operation cannot be undone."
+                    f"Удалить стоперы из "
+                    f"{file_count} файлов?\n\n"
+                    "Файлы DXF будут изменены.\n"
+                    "Это действие нельзя отменить."
                 ),
                 QMessageBox.Yes
                 | QMessageBox.No,
@@ -1177,6 +1319,19 @@ class MainWindow(QMainWindow):
             five_d_mode=five_d_mode,
         )
 
+        has_source_files = any(
+            files
+            for files in source.files_by_id.values()
+        )
+
+        if not has_source_files:
+            QMessageBox.information(
+                self,
+                "Нет файлов для копирования",
+                "В выбранной исходной папке нет файлов для копирования."
+            )
+            return
+
         # 1. Блокирующие ошибки
         if validation.blocking_issues:
             message = "\n".join(
@@ -1184,15 +1339,36 @@ class MainWindow(QMainWindow):
                 for issue in validation.blocking_issues
             )
 
-            QMessageBox.warning(
-                self,
-                "Copy validation",
-                message,
-            )
-            return
+            dialog = QMessageBox(self)
+            dialog.setWindowTitle("Проверка копирования")
+            dialog.setIcon(QMessageBox.Warning)
 
-        # После blocking validation source уже гарантированно существует
-        if source is None:
+            dialog.setText(
+                f"Обнаружено проблем: {len(validation.blocking_issues)}."
+            )
+
+            dialog.setInformativeText(
+                "Копирование не может быть продолжено."
+            )
+
+            dialog.setDetailedText(message)
+
+            dialog.setStandardButtons(
+                QMessageBox.Ok
+            )
+
+            dialog.button(
+                QMessageBox.Ok
+            ).setText(
+                "ОК"
+            )
+
+            self.localize_details_button(
+                dialog
+            )
+
+            dialog.exec()
+
             return
 
         # 2. Отсутствующие ID
@@ -1203,15 +1379,15 @@ class MainWindow(QMainWindow):
             )
 
             dialog = QMessageBox(self)
-            dialog.setWindowTitle("Create missing IDs")
+            dialog.setWindowTitle("Создание отсутствующих ID")
             dialog.setIcon(QMessageBox.Question)
 
             dialog.setText(
-                f"{len(validation.create_id_issues)} missing ID(s) found."
+                f"Обнаружено отсутствующих ID: {len(validation.create_id_issues)}."
             )
 
             dialog.setInformativeText(
-                "Create missing IDs and continue?"
+                "Создать отсутствующие ID и продолжить?"
             )
 
             dialog.setDetailedText(message)
@@ -1219,7 +1395,26 @@ class MainWindow(QMainWindow):
             dialog.setStandardButtons(
                 QMessageBox.Yes | QMessageBox.No
             )
-            dialog.setDefaultButton(QMessageBox.No)
+
+            dialog.button(
+                QMessageBox.Yes
+            ).setText(
+                "Да"
+            )
+
+            dialog.button(
+                QMessageBox.No
+            ).setText(
+                "Нет"
+            )
+
+            self.localize_details_button(
+                dialog
+            )
+
+            dialog.setDefaultButton(
+                QMessageBox.No
+            )
 
             answer = dialog.exec()
 
@@ -1254,18 +1449,18 @@ class MainWindow(QMainWindow):
 
             dialog = QMessageBox(self)
             dialog.setWindowTitle(
-                "Unselected destination IDs"
+                "Невыбранные целевые ID"
             )
             dialog.setIcon(
                 QMessageBox.Warning
             )
 
             dialog.setText(
-                f"{len(unselected_id_issues)} destination ID(s) are not selected."
+                f"Не выбрано целевых ID: {len(unselected_id_issues)}."
             )
 
             dialog.setInformativeText(
-                "These IDs will be skipped during copying."
+                "Эти ID будут пропущены при копировании."
             )
 
             dialog.setDetailedText(
@@ -1273,12 +1468,12 @@ class MainWindow(QMainWindow):
             )
 
             skip_button = dialog.addButton(
-                "Skip unselected IDs",
+                "Пропустить невыбранные ID",
                 QMessageBox.AcceptRole,
             )
 
             cancel_button = dialog.addButton(
-                "Cancel",
+                "Отмена",
                 QMessageBox.RejectRole,
             )
 
@@ -1299,8 +1494,8 @@ class MainWindow(QMainWindow):
 
             answer = QMessageBox.question(
                 self,
-                "Confirm copy",
-                message + "\n\nContinue without replacing existing files?",
+                "Подтверждение копирования",
+                message + "\n\nПродолжить без замены существующих файлов?",
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No,
             )
@@ -1318,8 +1513,8 @@ class MainWindow(QMainWindow):
         if plan.is_empty:
             QMessageBox.information(
                 self,
-                "Nothing to do",
-                "No operations selected."
+                "Нет выбранных артикулов",
+                "Не выбрано ни одного целевого артикула для копирования."
             )
             return
 
@@ -1374,7 +1569,7 @@ class MainWindow(QMainWindow):
         if isinstance(result, Exception):
             QMessageBox.critical(
                 self,
-                "Copy error",
+                "Ошибка копирования",
                 str(result),
             )
             self.current_copy_plan = None
@@ -1392,38 +1587,38 @@ class MainWindow(QMainWindow):
 
         if result.created_ids:
             summary.append(
-                f"{result.created_ids} IDs created."
+                f"Создано ID: {result.created_ids}."
             )
 
         if result.deleted_files:
             summary.append(
-                f"{result.deleted_files} files deleted."
+                f"Удалено файлов: {result.deleted_files}."
             )
 
         if result.copied_files:
             summary.append(
-                f"{result.copied_files} files copied."
+                f"Скопировано файлов: {result.copied_files}."
             )
 
         if result.renamed_files:
             summary.append(
-                f"{result.renamed_files} filenames renamed."
+                f"Переименовано файлов: {result.renamed_files}."
             )
 
         if result.renamed_layers:
             summary.append(
-                f'{result.renamed_layers} "nadpis" layers updated.'
+                f'Обновлено слоёв "nadpis": {result.renamed_layers}.'
             )
 
         if result.errors:
             summary.append(
-                f"{len(result.errors)} errors."
+                f"Ошибок: {len(result.errors)}."
             )
 
         QMessageBox.information(
             self,
-            "Done",
-            "\n".join(summary) or "No changes made.",
+            "Готово",
+            "\n".join(summary) or "Изменений не внесено.",
         )
 
     def is_cloud_available(self) -> bool:
@@ -1433,10 +1628,10 @@ class MainWindow(QMainWindow):
         ):
             QMessageBox.warning(
                 self,
-                "Cloud unavailable",
+                "Облако недоступно",
                 (
-                    "Cloud database is unavailable.\n\n"
-                    "Changes cannot be saved while offline."
+                    "Облачная база данных недоступна.\n\n"
+                    "Изменения нельзя сохранить в автономном режиме."
                 ),
             )
             return False
@@ -1457,7 +1652,6 @@ class MainWindow(QMainWindow):
                 self.sync_thread is not None
                 and self.sync_thread.isRunning()
         ):
-
             return
 
         self.database_page.set_cloud_syncing()
@@ -1554,7 +1748,7 @@ class MainWindow(QMainWindow):
                     "values": {
                         "folder_id": record.folder_id,
                         "template_name": record.template_name,
-                        "has_stoppers": "Yes" if record.has_stoppers else "No"
+                        "has_stoppers": "Да" if record.has_stoppers else "Нет"
                     },
                 }
             )
@@ -1632,7 +1826,7 @@ class MainWindow(QMainWindow):
 
         self.load_template_database_table()
         self.load_templates_to_eva_page()
-        
+
     def on_delete_templates(
             self,
             record_ids: list[int],
@@ -1645,8 +1839,8 @@ class MainWindow(QMainWindow):
 
         answer = QMessageBox.question(
             self,
-            "Delete templates",
-            f"Delete {len(record_ids)} selected records?",
+            "Удаление шаблонов",
+            f"Удалить выбранные записи: {len(record_ids)}?",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No,
         )
@@ -1674,7 +1868,6 @@ class MainWindow(QMainWindow):
         self.load_templates_to_eva_page()
 
         self.load_template_database_table()
-
 
     def load_stopper_database_table(self):
         records = (
@@ -1771,8 +1964,8 @@ class MainWindow(QMainWindow):
 
         answer = QMessageBox.question(
             self,
-            "Delete stoppers",
-            f"Delete {len(record_ids)} selected records?",
+            "Удаление стоперов",
+            f"Удалить выбранные записи: {len(record_ids)}?",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No,
         )
@@ -1898,8 +2091,8 @@ class MainWindow(QMainWindow):
 
         answer = QMessageBox.question(
             self,
-            "Delete copy rules",
-            f"Delete {len(record_ids)} selected records?",
+            "Удаление правил копирования",
+            f"Удалить выбранные записи: {len(record_ids)}?",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No,
         )
@@ -2415,7 +2608,7 @@ class MainWindow(QMainWindow):
         if not files:
             QMessageBox.information(
                 self,
-                "Nothing to export",
+                "Нет объектов для экспорта",
                 "Нет файлов для выгрузки.",
             )
             return
@@ -2441,7 +2634,7 @@ class MainWindow(QMainWindow):
         if destination_path is None:
             QMessageBox.warning(
                 self,
-                "Export",
+                "Экспорт",
                 "Не выбран путь для выгрузки.",
             )
             return
@@ -2460,7 +2653,7 @@ class MainWindow(QMainWindow):
 
             QMessageBox.warning(
                 self,
-                "Export conflict",
+                "Конфликт экспорта",
                 (
                     "Некоторые объекты уже существуют "
                     "в папке выгрузки:\n\n"
@@ -2474,7 +2667,7 @@ class MainWindow(QMainWindow):
         if plan.is_empty:
             QMessageBox.information(
                 self,
-                "Nothing to export",
+                "Нет объектов для экспорта",
                 "Нет объектов для выгрузки.",
             )
 
@@ -2580,7 +2773,7 @@ class MainWindow(QMainWindow):
 
         QMessageBox.information(
             self,
-            "Export complete",
+            "Экспорт завершён",
             (
                 "Выгрузка завершена.\n\n"
                 f"Обработано объектов: "
@@ -2598,7 +2791,7 @@ class MainWindow(QMainWindow):
 
         QMessageBox.critical(
             self,
-            "Export error",
+            "Ошибка экспорта",
             message,
         )
 
@@ -2680,7 +2873,7 @@ class MainWindow(QMainWindow):
         if not files:
             QMessageBox.information(
                 self,
-                "Nothing to delete",
+                "Нет объектов для удаления",
                 "Нет файлов для удаления.",
             )
             return
@@ -2702,7 +2895,7 @@ class MainWindow(QMainWindow):
         if plan.is_empty:
             QMessageBox.information(
                 self,
-                "Nothing to delete",
+                "Нет объектов для удаления",
                 "Нет объектов для удаления.",
             )
             return
@@ -2712,21 +2905,50 @@ class MainWindow(QMainWindow):
             for operation in plan.operations
         )
 
-        reply = QMessageBox.warning(
-            self,
-            "Подтверждение удаления",
-            (
-                f"Будет удалено объектов: "
-                f"{len(plan.operations)}\n\n"
-                f"{targets_text}\n\n"
-                "Это действие нельзя отменить.\n"
-                "Продолжить?"
-            ),
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No,
+        dialog = QMessageBox(self)
+        dialog.setWindowTitle("Подтверждение удаления")
+        dialog.setIcon(QMessageBox.Warning)
+
+        dialog.setText(
+            f"Будет удалено объектов: {len(plan.operations)}"
         )
 
-        if reply != QMessageBox.Yes:
+        dialog.setInformativeText(
+            "Это действие нельзя отменить.\n"
+            "Продолжить?"
+        )
+
+        dialog.setDetailedText(
+            targets_text
+        )
+
+        dialog.setStandardButtons(
+            QMessageBox.Yes | QMessageBox.No
+        )
+
+        dialog.button(
+            QMessageBox.Yes
+        ).setText(
+            "Да"
+        )
+
+        dialog.button(
+            QMessageBox.No
+        ).setText(
+            "Нет"
+        )
+
+        self.localize_details_button(
+            dialog
+        )
+
+        dialog.setDefaultButton(
+            QMessageBox.No
+        )
+
+        answer = dialog.exec()
+
+        if answer != QMessageBox.Yes:
             return
 
         self.current_delete_plan = plan
@@ -2809,7 +3031,7 @@ class MainWindow(QMainWindow):
 
         QMessageBox.information(
             self,
-            "Delete complete",
+            "Удаление завершено",
             (
                 "Удаление завершено.\n\n"
                 f"Удалено объектов: "
@@ -2826,7 +3048,7 @@ class MainWindow(QMainWindow):
 
         QMessageBox.critical(
             self,
-            "Delete error",
+            "Ошибка удаления",
             message,
         )
 
@@ -2877,7 +3099,7 @@ class MainWindow(QMainWindow):
         if not files:
             QMessageBox.information(
                 self,
-                "Nothing to move",
+                "Нет файлов для перемещения",
                 "Нет файлов для перемещения.",
             )
             return
@@ -2905,7 +3127,7 @@ class MainWindow(QMainWindow):
         except ValueError as error:
             QMessageBox.warning(
                 self,
-                "Move to ID",
+                "Перемещение в ID",
                 str(error),
             )
             return
@@ -2918,7 +3140,7 @@ class MainWindow(QMainWindow):
 
             QMessageBox.warning(
                 self,
-                "Move conflict",
+                "Конфликт перемещения",
                 (
                     "Некоторые целевые файлы "
                     "уже существуют:\n\n"
@@ -2931,7 +3153,7 @@ class MainWindow(QMainWindow):
         if plan.is_empty:
             QMessageBox.information(
                 self,
-                "Nothing to move",
+                "Нет файлов для перемещения",
                 (
                     "Нет файлов для перемещения.\n"
                     "Возможно, они уже находятся "
@@ -3030,7 +3252,7 @@ class MainWindow(QMainWindow):
 
         QMessageBox.critical(
             self,
-            "Move error",
+            "Ошибка перемещения",
             message,
         )
 
@@ -3073,7 +3295,7 @@ class MainWindow(QMainWindow):
 
         QMessageBox.information(
             self,
-            "Move complete",
+            "Перемещение завершено",
             (
                 "Перемещение завершено.\n\n"
                 f"Перемещено файлов: "
@@ -3141,35 +3363,34 @@ class MainWindow(QMainWindow):
             result: dict,
     ) -> None:
         message = (
-            "Stopper operation finished.\n\n"
-            f"Files processed: "
+            "Операция со стоперами завершена.\n\n"
+            f"Обработано файлов: "
             f"{result['processed_files']}\n"
-            f"Files failed: "
+            f"Ошибок при обработке файлов: "
             f"{result['failed_files']}"
         )
 
         if result["changed_total"]:
             message += (
                 "\n"
-                f"Stoppers changed: "
+                f"Изменено стоперов: "
                 f"{result['changed_total']} "
-                f"in {result['changed_files']} files"
+                f"в файлах: {result['changed_files']}"
             )
 
         if result["deleted_total"]:
             message += (
                 "\n"
-                f"Stoppers deleted: "
+                f"Удалено стоперов: "
                 f"{result['deleted_total']} "
-                f"in {result['deleted_files']} files"
+                f"в файлах: {result['deleted_files']}"
             )
 
         QMessageBox.information(
             self,
-            "Stoppers",
+            "Стоперы",
             message,
         )
-
 
     def on_stopper_worker_failed(
             self,
@@ -3177,9 +3398,9 @@ class MainWindow(QMainWindow):
     ) -> None:
         QMessageBox.critical(
             self,
-            "Stoppers",
+            "Стоперы",
             (
-                "Stopper operation failed.\n\n"
+                "Ошибка операции со стоперами.\n\n"
                 f"{error}"
             ),
         )
@@ -3247,7 +3468,7 @@ class MainWindow(QMainWindow):
         if self.last_export_path is None:
             QMessageBox.information(
                 self,
-                "Export",
+                "Экспорт",
                 "Выгрузка ещё не выполнялась.",
             )
             return
@@ -3255,7 +3476,7 @@ class MainWindow(QMainWindow):
         if not self.last_export_path.exists():
             QMessageBox.warning(
                 self,
-                "Export",
+                "Экспорт",
                 "Папка последней выгрузки больше не существует.",
             )
             return
@@ -3266,3 +3487,55 @@ class MainWindow(QMainWindow):
             )
         )
 
+    def on_reset_templates_requested(self):
+        self.session_templates = (
+            self.template_service.get_session_templates()
+        )
+
+        self.eva_page.render_templates(
+            self.session_templates
+        )
+
+    def localize_details_button(
+            self,
+            dialog: QMessageBox,
+    ) -> None:
+
+        for button in dialog.buttons():
+            if dialog.buttonRole(button) != QMessageBox.ActionRole:
+                continue
+
+            text = button.text()
+
+            if text in (
+                    "Show Details...",
+                    "Show Details…",
+            ):
+                button.setText(
+                    "Показать подробности..."
+                )
+
+            elif text in (
+                    "Hide Details...",
+                    "Hide Details…",
+            ):
+                button.setText(
+                    "Скрыть подробности..."
+                )
+
+            if not button.property(
+                    "detailsLocalizationConnected"
+            ):
+                button.setProperty(
+                    "detailsLocalizationConnected",
+                    True,
+                )
+
+                button.clicked.connect(
+                    lambda checked=False, d=dialog: (
+                        QTimer.singleShot(
+                            0,
+                            lambda: self.localize_details_button(d)
+                        )
+                    )
+                )

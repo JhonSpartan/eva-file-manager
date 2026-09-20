@@ -36,11 +36,11 @@ class DatabasePage(QWidget):
         self.tabs = QTabWidget()
 
         self.cloud_status_label = QLabel(
-            "● Cloud: Offline"
+            "● Облако: не в сети"
         )
 
         self.sync_btn = QPushButton(
-            "Sync now"
+            "Синхронизировать"
         )
 
         sync_layout = QHBoxLayout()
@@ -52,9 +52,9 @@ class DatabasePage(QWidget):
 
         self.templatesTable = DatabaseTableWidget(
             headers=[
-                "Folder ID",
-                "Template",
-                "Stoppers",
+                "ID папки",
+                "Шаблоны",
+                "Стоперы",
             ],
             stretch_column=2,
             center_columns={1, 3}
@@ -62,8 +62,8 @@ class DatabasePage(QWidget):
 
         self.stoppersTable = DatabaseTableWidget(
             [
-                "Diameter",
-                "Stopper",
+                "Диаметр",
+                "Стопер",
             ],
             stretch_column=2,
             center_columns={1}
@@ -71,26 +71,26 @@ class DatabasePage(QWidget):
 
         self.copyRulesTable = DatabaseTableWidget(
             [
-                "Mode",
-                "From ID",
-                "To ID",
+                "Режим",
+                "Из ID",
+                "В ID",
             ],
             center_columns = {1, 2, 3}
         )
 
         self.tabs.addTab(
             self.templatesTable,
-            "Templates",
+            "Шаблоны",
         )
 
         self.tabs.addTab(
             self.stoppersTable,
-            "Stoppers",
+            "Стоперы",
         )
 
         self.tabs.addTab(
             self.copyRulesTable,
-            "Copy rules",
+            "Правила копирования",
         )
 
         self.setup_paths_group()
@@ -302,7 +302,7 @@ class DatabasePage(QWidget):
 
     def set_cloud_online(self) -> None:
         self.cloud_status_label.setText(
-            "● Cloud: Online"
+            "● Облако: в сети"
         )
 
         self.cloud_status_label.setStyleSheet(
@@ -311,7 +311,7 @@ class DatabasePage(QWidget):
 
     def set_cloud_offline(self) -> None:
         self.cloud_status_label.setText(
-            "● Cloud: Offline"
+            "● Облако: не в сети"
         )
 
         self.cloud_status_label.setStyleSheet(
@@ -320,7 +320,7 @@ class DatabasePage(QWidget):
 
     def set_cloud_syncing(self) -> None:
         self.cloud_status_label.setText(
-            "● Cloud: Syncing..."
+            "● Облако: синхронизация..."
         )
 
         self.cloud_status_label.setStyleSheet(

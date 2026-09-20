@@ -1,4 +1,5 @@
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QDialog,
     QVBoxLayout,
@@ -271,7 +272,10 @@ class StopperSelectionDialog(BaseDialog):
             combination.name
         )
 
-        delete_button = QPushButton("×")
+        delete_button = QPushButton()
+        delete_button.setIcon(
+            QIcon("resources/icons/delete.svg")
+        )
         delete_button.setFixedSize(
             28,
             28,

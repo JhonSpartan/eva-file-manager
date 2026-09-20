@@ -33,8 +33,8 @@ class ArtCopyValidator:
                     issue_type=ValidationIssueType.NO_SOURCE_ART,
                     action=ValidationAction.BLOCK,
                     message=(
-                        "No source ART selected. "
-                        "Select one source ART."
+                        "Исходный ART не выбран. "
+                        "Выберите один исходный ART."
                     ),
                 )
             )
@@ -45,8 +45,8 @@ class ArtCopyValidator:
                     issue_type=ValidationIssueType.NO_DESTINATION_ARTS,
                     action=ValidationAction.BLOCK,
                     message=(
-                        "No destination ART selected. "
-                        "Select at least one destination ART."
+                        "Целевые ART не выбраны. "
+                        "Выберите хотя бы один целевой ART."
                     ),
                 )
             )
@@ -160,6 +160,9 @@ class ArtCopyValidator:
             id_name: str,
             result: CopyValidationResult,
     ):
+        if destination.art_state != SelectionState.FULL:
+            return
+
         result.issues.append(
             CopyValidationIssue(
                 issue_type=ValidationIssueType.MISSING_DESTINATION_ID,
@@ -167,7 +170,7 @@ class ArtCopyValidator:
                 action=ValidationAction.CREATE_ID,
                 id_name=id_name,
                 message=(
-                    f'ID "{id_name}" does not exist in '
+                    f'ID "{id_name}" отсутствует в '
                     f'"{destination.art_path.name}".'
                 ),
             )
@@ -194,9 +197,9 @@ class ArtCopyValidator:
                     destination_art=destination.art_path,
                     id_name=destination_id_path.name,
                     message=(
-                        f'ID "{destination_id_path.name}" already exists in '
+                        f'ID "{destination_id_path.name}" уже существует в '
                         f'"{destination.art_path.name}", '
-                        f"but it is not selected for replacement."
+                        f"но не выбран для замены."
                     )
                 )
             )
@@ -213,9 +216,9 @@ class ArtCopyValidator:
                     destination_art=destination.art_path,
                     id_name=destination_id_path.name,
                     message=(
-                        f'No files are selected for replacement in '
-                        f'ID "{destination_id_path.name}" of '
-                        f'"{destination.art_path.name}".'
+                        f'В ID "{destination_id_path.name}" артикула '
+                        f'"{destination.art_path.name}" '
+                        f"не выбраны файлы для замены."
                     )
                 )
             )

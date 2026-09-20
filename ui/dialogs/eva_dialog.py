@@ -15,7 +15,7 @@ class EvaDialog(BaseDialog):
         self.gridLayout_2 = QtWidgets.QGridLayout(self)
 
         # === Заголовок ===
-        self.label = QtWidgets.QLabel("Configurate new EVA", self)
+        self.label = QtWidgets.QLabel("Настройка новой EVA", self)
         font = QtGui.QFont()
         font.setPointSize(16)
         self.label.setFont(font)
@@ -47,12 +47,12 @@ class EvaDialog(BaseDialog):
         self.evaInput.setFont(font_input)
         self.gridLayout.addWidget(self.evaInput, 0, 1, 1, 1)
 
-        self.addEva = QtWidgets.QPushButton("Add", self.evaForm)
+        self.addEva = QtWidgets.QPushButton("Добавить", self.evaForm)
         self.addEva.setFont(font_btn)
         self.gridLayout.addWidget(self.addEva, 0, 2, 1, 1)
 
         # Art input
-        self.label_3 = QtWidgets.QLabel("Art. number", self.evaForm)
+        self.label_3 = QtWidgets.QLabel("Номер артикула", self.evaForm)
         self.label_3.setFont(font_label)
         self.label_3.setAlignment(QtCore.Qt.AlignCenter)
         self.gridLayout.addWidget(self.label_3, 1, 0, 1, 1)
@@ -61,7 +61,7 @@ class EvaDialog(BaseDialog):
         self.artIInput.setFont(font_input)
         self.gridLayout.addWidget(self.artIInput, 1, 1, 1, 1)
 
-        self.addArt = QtWidgets.QPushButton("Add", self.evaForm)
+        self.addArt = QtWidgets.QPushButton("Добавить", self.evaForm)
         self.addArt.setFont(font_btn)
         self.gridLayout.addWidget(self.addArt, 1, 2, 1, 1)
 
@@ -76,7 +76,10 @@ class EvaDialog(BaseDialog):
         self.gridLayout_2.addWidget(self.stoppersArea, 2, 0, 1, 2)
 
         # === Кнопки и списки ===
-        self.clearSelectedStoppers = QtWidgets.QPushButton("Clear selected stoppers", self)
+        self.clearSelectedStoppers = QtWidgets.QPushButton(
+            "Очистить выбранные стоперы",
+            self
+        )
         self.clearSelectedStoppers.setFont(font_btn)
         self.gridLayout_2.addWidget(self.clearSelectedStoppers, 3, 0, 1, 2)
 
@@ -85,7 +88,10 @@ class EvaDialog(BaseDialog):
         self.gridLayout_2.addWidget(self.suggestedStopperKomboList, 4, 0, 1, 1)
         self.gridLayout_2.addWidget(self.confirmedStopperKomboList, 4, 1, 1, 1)
 
-        self.addSelectedStoppers = QtWidgets.QPushButton("Add selected stoppers", self)
+        self.addSelectedStoppers = QtWidgets.QPushButton(
+            "Добавить выбранные стоперы",
+            self
+        )
         self.addSelectedStoppers.setFont(font_btn)
         self.gridLayout_2.addWidget(self.addSelectedStoppers, 5, 0, 1, 2)
 
@@ -95,7 +101,7 @@ class EvaDialog(BaseDialog):
         self.gridLayout_2.setColumnStretch(0, 500)
         self.gridLayout_2.setColumnStretch(1, 500)
 
-        self.setWindowTitle("EVA Configurator")
+        self.setWindowTitle("Конфигуратор EVA")
 
         # --- Здесь можно привязать сигналы ---
         self.addEva.clicked.connect(self.add_eva_clicked)
@@ -112,7 +118,7 @@ class EvaDialog(BaseDialog):
     def add_art_clicked(self):
         art = self.artIInput.text().strip()
         if art:
-            self.artNamesDialog.setText(f"Art: {art}")
+            self.artNamesDialog.setText(f"Артикул: {art}")
 
     def clear_stoppers(self):
         self.suggestedStopperKomboList.clear()
@@ -120,7 +126,7 @@ class EvaDialog(BaseDialog):
 
     def add_selected_stoppers(self):
         # пример будущего функционала — динамическая вставка
-        self.confirmedStopperKomboList.addItem("Example stopper")
+        self.confirmedStopperKomboList.addItem("Пример стопера")
 
 
 if __name__ == "__main__":

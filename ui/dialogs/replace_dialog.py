@@ -20,7 +20,7 @@ class ReplaceDialog(BaseDialog):
     ):
         super().__init__(parent)
 
-        self.setWindowTitle("Replace")
+        self.setWindowTitle("Замена")
         self.setModal(True)
 
         self.setup_ui(find_text)
@@ -35,7 +35,7 @@ class ReplaceDialog(BaseDialog):
 
         # Find text
         main_layout.addWidget(
-            QLabel("Find text")
+            QLabel("Найти текст")
         )
 
         self.find_input = QLineEdit(find_text)
@@ -47,7 +47,7 @@ class ReplaceDialog(BaseDialog):
 
         # Replace with
         main_layout.addWidget(
-            QLabel("Replace with")
+            QLabel("Заменить на")
         )
 
         self.replace_input = QLineEdit()
@@ -58,7 +58,7 @@ class ReplaceDialog(BaseDialog):
 
         # Mode
         self.create_new_files_checkbox = QCheckBox(
-            "Create new files"
+            "Создавать новые файлы"
         )
 
         main_layout.addWidget(
@@ -69,8 +69,8 @@ class ReplaceDialog(BaseDialog):
         buttons_layout = QHBoxLayout()
         buttons_layout.addStretch()
 
-        self.cancel_btn = QPushButton("Cancel")
-        self.execute_btn = QPushButton("Execute")
+        self.cancel_btn = QPushButton("Отмена")
+        self.execute_btn = QPushButton("Выполнить")
 
         buttons_layout.addWidget(
             self.cancel_btn

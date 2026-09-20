@@ -218,8 +218,8 @@ class StopperEditor:
             ):
                 raise RuntimeError(
                     (
-                        "Stopper center moved after "
-                        f"scaling: {file_path}"
+                        "Центр стопера сместился после "
+                        f"масштабирования: {file_path}"
                     )
                 )
 

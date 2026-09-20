@@ -21,8 +21,7 @@ class DeleteDialog(BaseDialog):
     ):
         super().__init__(parent)
 
-
-        self.setWindowTitle("Delete")
+        self.setWindowTitle("Удаление")
         self.setModal(True)
 
         self.setup_ui()
@@ -33,28 +32,28 @@ class DeleteDialog(BaseDialog):
         main_layout = QVBoxLayout(self)
 
         main_layout.addWidget(
-            QLabel("Delete level")
+            QLabel("Уровень удаления")
         )
 
         self.level_combo = QComboBox()
 
         self.level_combo.addItem(
-            "Files",
+            "Файлы",
             DeleteLevel.FILE,
         )
 
         self.level_combo.addItem(
-            "ID folders",
+            "Папки ID",
             DeleteLevel.ID,
         )
 
         self.level_combo.addItem(
-            "ART folders",
+            "Папки ART",
             DeleteLevel.ART,
         )
 
         self.level_combo.addItem(
-            "EVA folders",
+            "Папки EVA",
             DeleteLevel.EVA,
         )
 
@@ -66,11 +65,11 @@ class DeleteDialog(BaseDialog):
         buttons_layout.addStretch()
 
         self.cancel_btn = QPushButton(
-            "Cancel"
+            "Отмена"
         )
 
         self.continue_btn = QPushButton(
-            "Continue"
+            "Продолжить"
         )
 
         buttons_layout.addWidget(

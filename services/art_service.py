@@ -6,7 +6,7 @@ class ArtService:
         root = Path(directory)
 
         if not root.exists():
-            raise ValueError("Directory does not exist")
+            raise ValueError("Папка не существует")
 
         # Если выбран непосредственно ART
         if self._contains_dxf(root):

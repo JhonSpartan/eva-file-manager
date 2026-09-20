@@ -26,9 +26,9 @@ class TemplateDialog(BaseDialog):
         super().__init__(parent)
 
         self.setWindowTitle(
-            "Edit template"
+            "Изменить шаблон"
             if folder_id is not None
-            else "Add template"
+            else "Добавить шаблон"
         )
 
         self.setup_ui()
@@ -56,12 +56,12 @@ class TemplateDialog(BaseDialog):
         self.has_stoppers_checkbox = QCheckBox("Может иметь стоперы")
 
         form_layout.addRow(
-            "Folder ID:",
+            "ID папки:",
             self.folder_id_input,
         )
 
         form_layout.addRow(
-            "Template name:",
+            "Название шаблона:",
             self.template_name_input,
         )
 
@@ -75,8 +75,8 @@ class TemplateDialog(BaseDialog):
         buttons_layout = QHBoxLayout()
         buttons_layout.addStretch()
 
-        self.cancel_button = QPushButton("Cancel")
-        self.save_button = QPushButton("Save")
+        self.cancel_button = QPushButton("Отмена")
+        self.save_button = QPushButton("Сохранить")
 
         buttons_layout.addWidget(
             self.cancel_button
@@ -105,24 +105,24 @@ class TemplateDialog(BaseDialog):
         if not folder_id:
             QMessageBox.warning(
                 self,
-                "Invalid data",
-                "Folder ID is required.",
+                "Некорректные данные",
+                "Укажите ID папки.",
             )
             return
 
         if not folder_id.isdigit():
             QMessageBox.warning(
                 self,
-                "Invalid data",
-                "Folder ID must be a number.",
+                "Некорректные данные",
+                "ID папки должен быть числом.",
             )
             return
 
         if not template_name:
             QMessageBox.warning(
                 self,
-                "Invalid data",
-                "Template name is required.",
+                "Некорректные данные",
+                "Укажите название шаблона.",
             )
             return
 

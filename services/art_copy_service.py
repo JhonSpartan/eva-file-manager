@@ -8,7 +8,7 @@ class ArtCopyService:
         """Удаляет всё содержимое ART, но оставляет саму папку."""
 
         if not art_path.is_dir():
-            raise ValueError(f"ART directory does not exist: {art_path}")
+            raise ValueError(f"Папка ART не существует: {art_path}")
 
         for item in art_path.iterdir():
             if item.is_dir():
@@ -25,12 +25,12 @@ class ArtCopyService:
 
         if not source_art.is_dir():
             raise ValueError(
-                f"Source ART does not exist: {source_art}"
+                f"Исходный ART не существует: {source_art}"
             )
 
         if not destination_art.is_dir():
             raise ValueError(
-                f"Destination ART does not exist: {destination_art}"
+                f"Целевой ART не существует: {destination_art}"
             )
 
         self.clear_art(destination_art)

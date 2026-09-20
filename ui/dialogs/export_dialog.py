@@ -1,4 +1,3 @@
-
 from pathlib import Path
 from PySide6.QtWidgets import (
     QDialog,
@@ -25,7 +24,7 @@ class ExportDialog(BaseDialog):
     ):
         super().__init__(parent)
 
-        self.setWindowTitle("Export")
+        self.setWindowTitle("Экспорт")
         self.setModal(True)
 
         self.default_path = default_path
@@ -38,23 +37,23 @@ class ExportDialog(BaseDialog):
         main_layout = QVBoxLayout(self)
 
         main_layout.addWidget(
-            QLabel("Export level")
+            QLabel("Уровень экспорта")
         )
 
         self.level_combo = QComboBox()
 
         self.level_combo.addItem(
-            "EVA folders",
+            "Папки EVA",
             ExportLevel.EVA,
         )
 
         self.level_combo.addItem(
-            "ART folders",
+            "Папки ART",
             ExportLevel.ART,
         )
 
         self.level_combo.addItem(
-            "Files",
+            "Файлы",
             ExportLevel.FILE,
         )
 
@@ -63,7 +62,7 @@ class ExportDialog(BaseDialog):
         )
 
         main_layout.addWidget(
-            QLabel("Destination")
+            QLabel("Папка назначения")
         )
 
         path_layout = QHBoxLayout()
@@ -72,7 +71,7 @@ class ExportDialog(BaseDialog):
         self.path_input.setReadOnly(True)
 
         self.browse_btn = QPushButton(
-            "Browse"
+            "Обзор"
         )
 
         path_layout.addWidget(
@@ -88,7 +87,7 @@ class ExportDialog(BaseDialog):
         )
 
         self.use_default_path_checkbox = QCheckBox(
-            "Use default export path"
+            "Использовать путь экспорта по умолчанию"
         )
 
         if self.default_path is not None:
@@ -108,11 +107,11 @@ class ExportDialog(BaseDialog):
         buttons_layout.addStretch()
 
         self.cancel_btn = QPushButton(
-            "Cancel"
+            "Отмена"
         )
 
         self.execute_btn = QPushButton(
-            "Execute"
+            "Выполнить"
         )
 
         buttons_layout.addWidget(
@@ -149,7 +148,7 @@ class ExportDialog(BaseDialog):
 
         directory = QFileDialog.getExistingDirectory(
             self,
-            "Select export destination",
+            "Выберите папку назначения",
         )
 
         if not directory:

@@ -29,6 +29,7 @@ class EvaPage(QWidget):
     fiveDModeChanged = Signal(bool)
     createStructureRequested = Signal()
     openLastOutputRequested = Signal()
+    resetTemplatesRequested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -61,11 +62,13 @@ class EvaPage(QWidget):
         stoppers_controls_layout.addWidget(
             self.add_stoppers_btn
         )
+
         stoppers_controls_layout.addWidget(
             self.clear_template_selection_btn
         )
+
         stoppers_controls_layout.addWidget(
-            self.clear_prepared_eva_btn
+            self.reset_templates_btn
         )
 
         stoppers_controls_layout.addStretch()
@@ -78,7 +81,7 @@ class EvaPage(QWidget):
 
         stoppers_controls_layout.addWidget(
             self.five_d_mode_checkbox,
-     0,
+            0,
             Qt.AlignVCenter,
         )
 
@@ -136,8 +139,25 @@ class EvaPage(QWidget):
         )
 
         # Правая колонка
-        self.layout.addWidget(
-            self.preview_group,
+        right_layout = QVBoxLayout()
+
+        right_controls_layout = QHBoxLayout()
+        right_controls_layout.addStretch()
+
+        right_controls_layout.addWidget(
+            self.clear_prepared_eva_btn
+        )
+
+        right_layout.addLayout(
+            right_controls_layout
+        )
+
+        right_layout.addWidget(
+            self.preview_group
+        )
+
+        self.layout.addLayout(
+            right_layout,
             1, 1,
         )
 
@@ -183,11 +203,11 @@ class EvaPage(QWidget):
         self.add_stoppers_btn.setMinimumHeight(35)
         self.clear_template_selection_btn = QPushButton("Снять все галочки")
         self.clear_template_selection_btn.setMinimumHeight(35)
-        self.clear_prepared_eva_btn = QPushButton("Очистить")
-        self.clear_prepared_eva_btn.setMinimumHeight(35)
-        self.five_d_mode_checkbox = QCheckBox("5D Mode")
+        self.five_d_mode_checkbox = QCheckBox("Режим 5D")
         self.use_default_path_checkbox = QCheckBox("Путь по умолчанию")
         self.use_default_path_checkbox.setChecked(True)
+        self.reset_templates_btn = QPushButton("Сбросить шаблоны")
+        self.reset_templates_btn.setMinimumHeight(35)
     # ---------- Logs / Templates ----------
 
     def setup_templates_group(self):
@@ -230,6 +250,7 @@ class EvaPage(QWidget):
         self.clear_inputs_btn.clicked.connect(self.clear_inputs)
         self.create_structure_btn.clicked.connect(self.createStructureRequested.emit)
         self.open_last_output_btn.clicked.connect(self.openLastOutputRequested.emit)
+        self.reset_templates_btn.clicked.connect(self.resetTemplatesRequested.emit)
 
     def render_templates(
             self,
@@ -291,7 +312,7 @@ class EvaPage(QWidget):
                 }
             """)
             add_custom_button.setToolTip(
-                "Добавить custom-шаблон"
+                "Добавить пользовательский шаблон"
             )
 
             button_layout.addWidget(
@@ -344,7 +365,7 @@ class EvaPage(QWidget):
                 if template.origin == TemplateOrigin.CUSTOM:
                     badge = self.create_template_badge(
                         "C",
-                        "Custom",
+                        "Пользовательский",
                     )
 
                     template_layout.addWidget(
@@ -354,7 +375,7 @@ class EvaPage(QWidget):
                 if template.stopper_combination is not None:
                     badge = self.create_template_badge(
                         "S",
-                        "Stopper",
+                        "Стопер",
                     )
 
                     template_layout.addWidget(
@@ -408,8 +429,6 @@ class EvaPage(QWidget):
             if widget is not None:
                 widget.deleteLater()
 
-
-
     def setup_preview_group(self):
         self.preview_group = QGroupBox(
             "Структура EVA"
@@ -417,6 +436,22 @@ class EvaPage(QWidget):
 
         preview_layout = QVBoxLayout(
             self.preview_group
+        )
+
+        controls_layout = QHBoxLayout()
+        controls_layout.addStretch()
+
+        self.clear_prepared_eva_btn = QPushButton(
+            "Очистить структуру EVA"
+        )
+        self.clear_prepared_eva_btn.setMinimumHeight(35)
+
+        controls_layout.addWidget(
+            self.clear_prepared_eva_btn
+        )
+
+        preview_layout.addLayout(
+            controls_layout
         )
 
         self.preview_tree = QTreeWidget()

@@ -23,9 +23,9 @@ class CopyRuleDialog(BaseDialog):
         super().__init__(parent)
 
         self.setWindowTitle(
-            "Edit copy rule"
+            "Изменить правило копирования"
             if mode
-            else "Add copy rule"
+            else "Добавить правило копирования"
         )
 
         self.setup_ui()
@@ -44,17 +44,17 @@ class CopyRuleDialog(BaseDialog):
         self.to_id_input = QLineEdit()
 
         form_layout.addRow(
-            "Mode:",
+            "Режим:",
             self.mode_input,
         )
 
         form_layout.addRow(
-            "From ID:",
+            "Из ID:",
             self.from_id_input,
         )
 
         form_layout.addRow(
-            "To ID:",
+            "В ID:",
             self.to_id_input,
         )
 
@@ -63,8 +63,8 @@ class CopyRuleDialog(BaseDialog):
         buttons_layout = QHBoxLayout()
         buttons_layout.addStretch()
 
-        self.cancel_button = QPushButton("Cancel")
-        self.save_button = QPushButton("Save")
+        self.cancel_button = QPushButton("Отмена")
+        self.save_button = QPushButton("Сохранить")
 
         buttons_layout.addWidget(
             self.cancel_button
@@ -92,24 +92,24 @@ class CopyRuleDialog(BaseDialog):
         if not mode:
             QMessageBox.warning(
                 self,
-                "Invalid data",
-                "Mode is required.",
+                "Некорректные данные",
+                "Укажите режим.",
             )
             return
 
         if not from_id:
             QMessageBox.warning(
                 self,
-                "Invalid data",
-                "From ID is required.",
+                "Некорректные данные",
+                "Укажите исходный ID.",
             )
             return
 
         if not to_id:
             QMessageBox.warning(
                 self,
-                "Invalid data",
-                "To ID is required.",
+                "Некорректные данные",
+                "Укажите целевой ID.",
             )
             return
 

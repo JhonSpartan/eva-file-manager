@@ -44,9 +44,9 @@ class DatabaseTableWidget(QWidget):
         # Toolbar
         toolbar = QHBoxLayout()
 
-        self.addButton = QPushButton("+ Add")
-        self.editButton = QPushButton("Edit")
-        self.deleteButton = QPushButton("Delete")
+        self.addButton = QPushButton("+ Добавить")
+        self.editButton = QPushButton("Изменить")
+        self.deleteButton = QPushButton("Удалить")
 
         toolbar.addWidget(self.addButton)
         toolbar.addWidget(self.editButton)
@@ -100,8 +100,8 @@ class DatabaseTableWidget(QWidget):
         # Status
         status_layout = QHBoxLayout()
 
-        self.selectedLabel = QLabel("0 selected")
-        self.recordsLabel = QLabel("0 records")
+        self.selectedLabel = QLabel("Выбрано: 0")
+        self.recordsLabel = QLabel("Записей: 0")
 
         status_layout.addWidget(self.selectedLabel)
         status_layout.addStretch()
@@ -295,11 +295,11 @@ class DatabaseTableWidget(QWidget):
         total_count = self.table.rowCount()
 
         self.selectedLabel.setText(
-            f"{selected_count} selected"
+            f"Выбрано: {selected_count}"
         )
 
         self.recordsLabel.setText(
-            f"{total_count} records"
+            f"Записей: {total_count}"
         )
 
         if total_count == 0:
@@ -326,7 +326,9 @@ class CheckBoxHeader(QHeaderView):
         super().__init__(orientation, parent)
 
         self.checkbox = HeaderCheckBox(self)
+        self.checkbox.setObjectName("headerCheckBox")
         self.checkbox.setTristate(True)
+        self.checkbox.setFixedSize(14, 14)
 
         self.checkbox.stateChanged.connect(
             self._on_state_changed
@@ -370,6 +372,7 @@ class CheckBoxHeader(QHeaderView):
         x = (
             section_x
             + (section_width - checkbox_size.width()) // 2
+            +  2
         )
 
         y = (

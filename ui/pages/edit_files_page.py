@@ -1,14 +1,15 @@
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtGui import QDesktopServices, QIcon
 from PySide6.QtWidgets import (
     QWidget, QLabel, QPushButton, QLineEdit, QListWidget,
     QProgressBar, QVBoxLayout, QHBoxLayout, QGridLayout, QGroupBox
 )
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Signal, QSize
 
 
 class EditFilesPage(QWidget):
 
     loadFilesRequested = Signal(str)
+    addFilesRequested = Signal(str)
     renameFilesRequested = Signal()
     removeFilesRequested = Signal()
     replaceRequested = Signal(str)
@@ -34,6 +35,9 @@ class EditFilesPage(QWidget):
     def setup_connections(self):
         self.load_files_btn.clicked.connect(
             self.on_load_files_clicked
+        )
+        self.add_files_btn.clicked.connect(
+            self.on_add_files_clicked
         )
         self.rename_files_btn.clicked.connect(
             self.on_rename_files_clicked
@@ -81,14 +85,16 @@ class EditFilesPage(QWidget):
         # =====================================================
         # ROW 0 — Source directory
         # =====================================================
-        source_group = QGroupBox("Source directory")
+        source_group = QGroupBox("Исходная папка")
         source_layout = QHBoxLayout(source_group)
 
         self.source_dir_input = QLineEdit()
-        self.load_files_btn = QPushButton("Load files")
+        self.load_files_btn = QPushButton("Перезагрузить файлы")
+        self.add_files_btn = QPushButton("Добавить файлы")
 
         source_layout.addWidget(self.source_dir_input)
         source_layout.addWidget(self.load_files_btn)
+        source_layout.addWidget(self.add_files_btn)
 
         main_layout.addWidget(
             source_group,
@@ -100,20 +106,20 @@ class EditFilesPage(QWidget):
         # =====================================================
 
         # --- Left: Source files ---
-        left_group = QGroupBox("Files to rename")
+        left_group = QGroupBox("Файлы для переименования")
         left_layout = QVBoxLayout(left_group)
 
         self.files_to_rename_list = QListWidget()
 
         left_buttons_layout = QHBoxLayout()
 
-        self.copy_source_btn = QPushButton("Export")
-        self.delete_source_btn = QPushButton("Delete")
-        self.move_to_id_btn = QPushButton("Move to ID")
-        self.rename_files_btn = QPushButton("Rename files")
+        self.rename_files_btn = QPushButton("Переименовать")
+        self.delete_source_btn = QPushButton("Удалить")
+        self.move_to_id_btn = QPushButton("Переместить в ID")
+        self.copy_source_btn = QPushButton("Экспорт")
 
         left_buttons_layout.addWidget(
-            self.copy_source_btn
+            self.rename_files_btn
         )
         left_buttons_layout.addWidget(
             self.delete_source_btn
@@ -122,10 +128,12 @@ class EditFilesPage(QWidget):
             self.move_to_id_btn
         )
         left_buttons_layout.addWidget(
-            self.rename_files_btn
+            self.copy_source_btn
         )
 
-        self.open_source_export_btn = QPushButton("Open export folder")
+        self.open_source_export_btn = QPushButton(
+            "Открыть папку экспорта"
+        )
 
         left_layout.addWidget(
             self.files_to_rename_list
@@ -138,28 +146,41 @@ class EditFilesPage(QWidget):
         )
 
         # --- Right: Processed files ---
-        right_group = QGroupBox("Renamed files")
+        right_group = QGroupBox("Переименованные файлы")
         right_layout = QVBoxLayout(right_group)
 
         self.renamed_files_list = QListWidget()
-        right_actions_layout = QHBoxLayout()
-        self.return_processed_btn = QPushButton("←")
-        self.return_processed_btn.setFixedWidth(40)
-        self.copy_processed_btn = QPushButton("Export")
-        self.open_processed_export_btn = QPushButton("Open export folder")
 
+        right_actions_layout = QHBoxLayout()
+
+        self.return_processed_btn = QPushButton()
+
+        self.return_processed_btn.setIcon(
+            QIcon("resources/icons/arrow_left.svg")
+        )
+        self.return_processed_btn.setIconSize(
+            QSize(20, 20)
+        )
+        self.return_processed_btn.setToolTip(
+            "Вернуть в список файлов"
+        )
+
+        self.copy_processed_btn = QPushButton("Экспорт")
+
+        self.open_processed_export_btn = QPushButton(
+            "Открыть папку экспорта"
+        )
 
         right_layout.addWidget(
             self.renamed_files_list
         )
+
         right_actions_layout.addWidget(
             self.return_processed_btn
         )
         right_actions_layout.addWidget(
             self.copy_processed_btn
         )
-
-
 
         right_layout.addLayout(
             right_actions_layout
@@ -194,7 +215,6 @@ class EditFilesPage(QWidget):
         # ROW 3 — Bottom controls
         # =====================================================
 
-        # --- Left: existing rename action ---
         buttons_widget = QWidget()
         buttons_layout = QVBoxLayout(
             buttons_widget
@@ -205,7 +225,7 @@ class EditFilesPage(QWidget):
         )
 
         self.remove_files_btn = QPushButton(
-            "Clear lists"
+            "Очистить списки"
         )
         self.remove_files_btn.setMinimumHeight(
             36
@@ -217,17 +237,19 @@ class EditFilesPage(QWidget):
         buttons_layout.addStretch()
 
         # --- Right: File actions ---
-        file_actions_group = QGroupBox("File actions")
+        file_actions_group = QGroupBox(
+            "Действия с файлами"
+        )
         file_actions_layout = QVBoxLayout(
             file_actions_group
         )
 
         self.find_input = QLineEdit()
-        self.replace_btn = QPushButton("Execute")
-        self.stoppers_btn = QPushButton("Stoppers...")
+        self.replace_btn = QPushButton("Выполнить")
+        self.stoppers_btn = QPushButton("Стоперы...")
 
         file_actions_layout.addWidget(
-            QLabel("Find text")
+            QLabel("Найти текст")
         )
 
         replace_layout = QHBoxLayout()
@@ -282,6 +304,11 @@ class EditFilesPage(QWidget):
 
     def on_load_files_clicked(self):
         self.loadFilesRequested.emit(
+            self.current_directory
+        )
+
+    def on_add_files_clicked(self):
+        self.addFilesRequested.emit(
             self.current_directory
         )
 
