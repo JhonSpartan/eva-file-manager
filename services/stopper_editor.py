@@ -1,9 +1,7 @@
 from pathlib import Path
-
 import ezdxf
 from ezdxf.math import Matrix44, Vec2
 from ezdxf.path import make_path
-
 from models.stopper_edit_result import StopperEditResult
 from services.stopper_detector import StopperDetector
 from services.stopper_validator import StopperValidator

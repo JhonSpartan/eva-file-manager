@@ -1,7 +1,5 @@
 from models.stopper_candidate import StopperCandidate
-from models.stopper_validation_result import (
-    StopperValidationResult,
-)
+from models.stopper_validation_result import StopperValidationResult
 
 
 class StopperValidator:

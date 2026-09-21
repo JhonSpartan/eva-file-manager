@@ -1,7 +1,6 @@
 from pathlib import Path
 
 from PySide6.QtWidgets import (
-    QDialog,
     QVBoxLayout,
     QHBoxLayout,
     QLabel,

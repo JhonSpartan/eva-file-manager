@@ -1,8 +1,5 @@
-from pathlib import Path
 import shutil
-
 from PySide6.QtCore import QObject, Signal
-
 from models.file_action_models import (
     ReplaceMode,
     ReplacePlan,

@@ -1,6 +1,4 @@
-from PySide6.QtGui import QRegion
 from PySide6.QtWidgets import QPushButton
-
 from models.catalog_models import StopperRecord
 
 

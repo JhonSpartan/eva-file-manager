@@ -1,6 +1,5 @@
 from pathlib import Path
 from PySide6.QtWidgets import (
-    QDialog,
     QLabel,
     QComboBox,
     QLineEdit,

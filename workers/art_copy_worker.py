@@ -1,8 +1,5 @@
-import shutil
 from pathlib import Path
-
 from PySide6.QtCore import QObject, Signal, Slot
-
 from models.copy_models import CopyPlan
 from services.art_copy_service import ArtCopyService
 from services.file_service import FileService

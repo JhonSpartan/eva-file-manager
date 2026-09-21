@@ -1,5 +1,4 @@
 import psycopg
-
 from config.settings import FILEFORGE_DATABASE_URL
 from database.cloud_migrations import CloudDatabaseMigrator
 

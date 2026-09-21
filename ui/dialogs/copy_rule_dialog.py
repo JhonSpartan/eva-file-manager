@@ -1,5 +1,4 @@
 from PySide6.QtWidgets import (
-    QDialog,
     QVBoxLayout,
     QFormLayout,
     QLineEdit,

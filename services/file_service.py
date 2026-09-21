@@ -1,13 +1,9 @@
 import pathlib
 from pathlib import Path
 import ezdxf
-from dataclasses import dataclass, field
-
-from typing import TYPE_CHECKING
-
 # if TYPE_CHECKING:
-from models.results import RenameResult, RenameFileResult
-from models.results import ReplaceResult
+from models.results import RenameResult, RenameFileResult, ReplaceResult
+
 
 class FileService:
 
@@ -120,18 +116,24 @@ class FileService:
 
         return self._file_result(file, new_file, renamed)
 
-    def rename_inner(self, new_file_path: Path, file_art: str, filename: str, file_id: str) -> int:
+    def rename_inner(
+            self,
+            new_file_path: Path,
+            file_art: str,
+            filename: str,
+            file_id: str,
+    ) -> int:
         layer_changes = 0
 
         try:
             doc = ezdxf.readfile(new_file_path)
             msp = doc.modelspace()
             layers = doc.layers
-        except IOError:
-            print(f"Не удалось прочитать файл: {new_file_path}")
-            return 0
-        except ezdxf.DXFStructureError:
-            print(f"Некорректная структура DXF: {new_file_path}")
+
+        except (
+                IOError,
+                ezdxf.DXFStructureError,
+        ):
             return 0
 
         layer_name = "nadpis"
@@ -149,7 +151,7 @@ class FileService:
         layer_changes += layer_change_res
 
         self.remove_defpoints_layer(doc, layer_to_remove)
-        self.save_file(doc, new_file_path)
+        self.save_file(doc)
 
         return layer_changes
 
@@ -234,11 +236,12 @@ class FileService:
             # Слой не существует — игнорируем
             pass
 
-    def save_file(self, doc, new_file_path):
+    def save_file(self, doc):
         try:
             doc.save()
-        except Exception as e:
-            print(f"Ошибка сохранения файла {new_file_path}: {e}")
+
+        except Exception:
+            pass
 
     def log_errors(self, log_path, logs):
         log_path.mkdir(parents=True, exist_ok=True)

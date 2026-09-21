@@ -1,7 +1,4 @@
-# ui/dialogs/stopper_dialog.py
-
 from PySide6.QtWidgets import (
-    QDialog,
     QVBoxLayout,
     QFormLayout,
     QLineEdit,

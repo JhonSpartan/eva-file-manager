@@ -1,5 +1,4 @@
 from pathlib import Path
-
 from database.database import Database
 from models.path_models import PathRecord
 

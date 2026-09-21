@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 from enum import Enum, auto
-from PySide6.QtCore import Qt
+
 
 class SelectionState(Enum):
     NONE = 0

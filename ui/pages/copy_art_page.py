@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (
-    QWidget, QLabel, QPushButton, QLineEdit, QListWidget,
+    QWidget, QLabel, QPushButton, QLineEdit,
     QProgressBar, QVBoxLayout, QHBoxLayout, QGridLayout,
-    QGroupBox, QTreeWidget, QCheckBox
+    QGroupBox, QCheckBox
 )
 from PySide6.QtCore import Qt, Signal
 from widgets.arts_tree import ArtsTree, ArtsTreeMode

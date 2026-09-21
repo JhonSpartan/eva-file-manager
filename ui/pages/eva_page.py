@@ -1,16 +1,11 @@
 import re
-
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QGridLayout, QGroupBox,
     QLabel, QLineEdit, QPushButton, QHBoxLayout, QTreeWidget, QCheckBox, QTreeWidgetItem, QMessageBox
 )
 from PySide6.QtCore import Signal, Qt
-
-from ui.dialogs.eva_dialog import EvaDialog
-
 from PySide6.QtWidgets import QScrollArea, QProgressBar
-
 from models.eva_models import (SessionTemplate, TemplateOrigin, PreviewTemplate, PreparedEva)
 
 

@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-
 from ezdxf.entities import DXFGraphic
 from ezdxf.path import Path
 

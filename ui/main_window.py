@@ -1,12 +1,10 @@
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QPushButton, QLabel,
-    QVBoxLayout, QHBoxLayout, QGridLayout, QGroupBox, QLineEdit,
-    QStackedWidget, QMessageBox, QFileDialog, QListWidgetItem, QTreeWidgetItem, QAbstractItemView, QDialog
+    QMainWindow, QWidget, QPushButton, QLabel,
+    QVBoxLayout, QHBoxLayout,
+    QStackedWidget, QMessageBox, QFileDialog, QListWidgetItem, QDialog
 )
 from PySide6.QtGui import QFont, QIcon, QDesktopServices
 from PySide6.QtCore import Qt, QUrl, QThread, QSettings, QTimer
-
-import pathlib
 from pathlib import Path
 
 from database.repositories.path_repository import PathRepository
@@ -977,29 +975,6 @@ class MainWindow(QMainWindow):
             message,
         )
 
-    def start_replace(self, find_text: str, replace_text: str):
-        self.files_for_replace.clear()
-        left_list = self.edit_page.files_to_rename_list
-        for row in range(left_list.count()):
-            if not left_list.isRowHidden(row):
-                self.files_for_replace.append(left_list.item(row).data(Qt.UserRole))
-
-        self.set_processing_state(True)
-        self.thread = QThread()
-        self.replace_worker = ReplaceWorker(self.files_for_replace, find_text, replace_text, self.file_service)
-
-        self.worker.moveToThread(self.thread)
-
-        self.thread.started.connect(self.worker.run)
-        self.replace_worker.progress.connect(self.on_replace_progress)
-        self.replace_worker.finished.connect(self.on_replace_finished)
-
-        self.replace_worker.finished.connect(self.thread.quit)
-        self.replace_worker.finished.connect(self.worker.deleteLater)
-        self.thread.finished.connect(self.thread.deleteLater)
-
-        self.thread.start()
-
     def on_replace_progress(self, current, total, file_result):
         self.edit_page.editFilesPbar.setMaximum(total)
         self.edit_page.editFilesPbar.setValue(current)
@@ -1710,10 +1685,6 @@ class MainWindow(QMainWindow):
             self,
             result: dict,
     ) -> None:
-        print(
-            "Cloud sync finished:",
-            result,
-        )
 
         self.database_page.set_cloud_online()
 
@@ -1727,11 +1698,6 @@ class MainWindow(QMainWindow):
             self,
             error: str,
     ) -> None:
-        print(
-            "Cloud sync failed:",
-            error,
-        )
-
         self.database_page.set_cloud_offline()
 
     def load_template_database_table(self):

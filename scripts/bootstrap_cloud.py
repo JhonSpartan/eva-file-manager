@@ -1,14 +1,4 @@
-"""
-One-time/manual bootstrap utility.
-
-Copies shared catalog data from the local SQLite database
-to the central PostgreSQL database.
-
-Not used during normal FileForge startup.
-"""
-
 from pathlib import Path
-
 from database.cloud_database import CloudDatabase
 from database.database import Database
 

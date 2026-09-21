@@ -377,11 +377,6 @@ QWidget#sideMenu QPushButton:checked {
    Checkboxes / radio buttons
    ============================== */
 
-
-/* ==============================
-   Checkboxes
-   ============================== */
-
 QCheckBox,
 QRadioButton {
     background-color: transparent;
@@ -414,7 +409,6 @@ QRadioButton::indicator:unchecked:hover {
 QCheckBox:disabled,
 QRadioButton:disabled {
     color: #68717b;
-}
 }
 
 /* ==============================
@@ -466,7 +460,7 @@ QWidget#sideMenu QPushButton {
    ============================== */
 
 QMessageBox QLabel {
-    min-width: 360px;
+    min-width: 150px;
 }
 
 

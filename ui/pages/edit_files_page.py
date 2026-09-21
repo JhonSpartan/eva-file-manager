@@ -1,4 +1,4 @@
-from PySide6.QtGui import QDesktopServices, QIcon
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QWidget, QLabel, QPushButton, QLineEdit, QListWidget,
     QProgressBar, QVBoxLayout, QHBoxLayout, QGridLayout, QGroupBox
@@ -245,7 +245,7 @@ class EditFilesPage(QWidget):
         )
 
         self.find_input = QLineEdit()
-        self.replace_btn = QPushButton("Выполнить")
+        self.replace_btn = QPushButton("Заменить")
         self.stoppers_btn = QPushButton("Стоперы...")
 
         file_actions_layout.addWidget(

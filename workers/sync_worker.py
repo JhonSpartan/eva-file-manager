@@ -1,5 +1,4 @@
 from PySide6.QtCore import QObject, Signal, Slot
-
 from database.database import Database
 from database.cloud_database import CloudDatabase
 from database.repositories.cloud_sync_repository import CloudSyncRepository

@@ -1,5 +1,3 @@
-# ui/pages/database_page.py
-
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,

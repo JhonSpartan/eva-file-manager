@@ -1,7 +1,5 @@
 from pathlib import Path
-
 from PySide6.QtCore import QObject, Signal, Slot
-
 from services.stopper_editor import StopperEditor
 
 
@@ -86,14 +84,8 @@ class StopperWorker(QObject):
 
                     processed_files += 1
 
-                except Exception as error:
+                except Exception:
                     failed_files += 1
-
-                    print(
-                        "Stopper operation failed:",
-                        file_path,
-                        error,
-                    )
 
                 self.progress.emit(
                     index,
@@ -101,6 +93,7 @@ class StopperWorker(QObject):
                     file_path,
                     modified,
                 )
+
             self.finished.emit(
                 {
                     "processed_files": processed_files,

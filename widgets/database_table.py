@@ -1,6 +1,4 @@
-# widgets/database_table.py
-
-from PySide6.QtCore import Qt, Signal, QRect
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,

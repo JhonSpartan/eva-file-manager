@@ -1,6 +1,3 @@
-from dataclasses import dataclass
-
-from ezdxf.entities import DXFGraphic
 from ezdxf.layouts import Modelspace
 from ezdxf.math import Vec2, intersect_polylines_2d
 from ezdxf.path import Path, make_path

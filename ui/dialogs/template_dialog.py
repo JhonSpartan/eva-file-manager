@@ -1,7 +1,4 @@
-# ui/dialogs/template_dialog.py
-
 from PySide6.QtWidgets import (
-    QDialog,
     QVBoxLayout,
     QFormLayout,
     QLineEdit,

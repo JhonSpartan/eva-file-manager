@@ -1,5 +1,4 @@
 from PySide6.QtCore import QObject, Signal, Slot
-
 from models.eva_models import GenerationPlan
 
 
