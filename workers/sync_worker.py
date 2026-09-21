@@ -32,7 +32,6 @@ class SyncWorker(QObject):
 
         try:
             if self.sync_service is None:
-
                 self.cloud_database.initialize()
 
                 cloud_sync_repository = CloudSyncRepository(

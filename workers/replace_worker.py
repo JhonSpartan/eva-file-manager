@@ -10,7 +10,7 @@ class ReplaceWorker(QObject):
 
     progress = Signal(int, int, object)
     finished = Signal(int)
-    errorOccurred = Signal(str)
+    failed = Signal(str)
 
     def __init__(
             self,
@@ -49,4 +49,4 @@ class ReplaceWorker(QObject):
             self.finished.emit(processed)
 
         except Exception as error:
-            self.errorOccurred.emit(str(error))
+            self.failed.emit(str(error))

@@ -237,11 +237,7 @@ class FileService:
             pass
 
     def save_file(self, doc):
-        try:
-            doc.save()
-
-        except Exception:
-            pass
+        doc.save()
 
     def log_errors(self, log_path, logs):
         log_path.mkdir(parents=True, exist_ok=True)

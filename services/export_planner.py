@@ -100,23 +100,16 @@ class ExportPlanner:
             destination_root: Path,
     ) -> Path:
 
-        if level == ExportLevel.FILE:
-            return (
-                    destination_root
-                    / source_path.name
+        if level not in (
+                ExportLevel.FILE,
+                ExportLevel.ART,
+                ExportLevel.EVA,
+        ):
+            raise ValueError(
+                f"Unsupported export level: {level}"
             )
 
-        if level == ExportLevel.ART:
-            return (
-                    destination_root
-                    / source_path.name
-            )
-
-        if level == ExportLevel.EVA:
-            return (
-                    destination_root
-                    / source_path.name
-            )
+        return destination_root / source_path.name
 
         raise ValueError(
             f"Unsupported export level: {level}"

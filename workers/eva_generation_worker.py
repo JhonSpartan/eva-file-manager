@@ -6,7 +6,7 @@ class EvaGenerationWorker(QObject):
 
     progressChanged = Signal(int)
     finished = Signal(int, int)
-    errorOccurred = Signal(str)
+    failed = Signal(str)
 
     def __init__(
             self,
@@ -31,7 +31,6 @@ class EvaGenerationWorker(QObject):
 
             created_count = 0
             existing_count = 0
-
 
             for index, generation_file in enumerate(
                     self.generation_plan.files,
@@ -69,6 +68,6 @@ class EvaGenerationWorker(QObject):
             )
 
         except Exception as error:
-            self.errorOccurred.emit(
+            self.failed.emit(
                 str(error)
             )

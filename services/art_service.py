@@ -1,5 +1,6 @@
 from pathlib import Path
 
+
 class ArtService:
 
     def load_arts(self, directory: str) -> list[Path]:

@@ -4,7 +4,8 @@ from models.copy_models import (
     ArtSelection,
     SelectionState,
     CopyPlan,
-    DestinationCopyPlan, FileCopyOperation,
+    DestinationCopyPlan,
+    FileCopyOperation,
 )
 from services.copy_rules import CopyRuleService
 

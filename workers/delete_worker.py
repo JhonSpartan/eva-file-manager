@@ -13,7 +13,7 @@ class DeleteWorker(QObject):
 
     progress = Signal(int, int, object)
     finished = Signal(int)
-    errorOccurred = Signal(str)
+    failed = Signal(str)
 
     def __init__(
             self,
@@ -59,6 +59,6 @@ class DeleteWorker(QObject):
             )
 
         except Exception as error:
-            self.errorOccurred.emit(
+            self.failed.emit(
                 str(error)
             )

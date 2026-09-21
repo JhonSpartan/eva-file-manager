@@ -7,9 +7,9 @@ from models.results import CopyArtResult
 
 
 class ArtCopyWorker(QObject):
-
     progress = Signal(int, int)
     finished = Signal(object)
+    failed = Signal(str)
 
     def __init__(
             self,
@@ -118,8 +118,6 @@ class ArtCopyWorker(QObject):
                     current += 1
                     self.progress.emit(current, total)
 
-            self.finished.emit(result)
-
             if result.errors:
                 log_path = Path.home() / ".eva_logs"
 
@@ -128,8 +126,10 @@ class ArtCopyWorker(QObject):
                     result.errors,
                 )
 
-        except Exception as e:
-            self.finished.emit(e)
+            self.finished.emit(result)
 
+
+        except Exception as error:
+            self.failed.emit(str(error))
 
 

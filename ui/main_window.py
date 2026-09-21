@@ -827,7 +827,7 @@ class MainWindow(QMainWindow):
             self.on_replace_plan_finished
         )
 
-        self.replace_worker.errorOccurred.connect(
+        self.replace_worker.failed.connect(
             self.on_replace_plan_error
         )
 
@@ -835,7 +835,7 @@ class MainWindow(QMainWindow):
             self.replace_thread.quit
         )
 
-        self.replace_worker.errorOccurred.connect(
+        self.replace_worker.failed.connect(
             self.replace_thread.quit
         )
 
@@ -843,7 +843,7 @@ class MainWindow(QMainWindow):
             self.replace_worker.deleteLater
         )
 
-        self.replace_worker.errorOccurred.connect(
+        self.replace_worker.failed.connect(
             self.replace_worker.deleteLater
         )
 
@@ -1520,11 +1520,23 @@ class MainWindow(QMainWindow):
             self.on_copy_finished
         )
 
+        self.art_copy_worker.failed.connect(
+            self.on_copy_failed
+        )
+
         self.art_copy_worker.finished.connect(
             self.thread.quit
         )
 
+        self.art_copy_worker.failed.connect(
+            self.thread.quit
+        )
+
         self.art_copy_worker.finished.connect(
+            self.art_copy_worker.deleteLater
+        )
+
+        self.art_copy_worker.failed.connect(
             self.art_copy_worker.deleteLater
         )
 
@@ -1594,6 +1606,19 @@ class MainWindow(QMainWindow):
             self,
             "Готово",
             "\n".join(summary) or "Изменений не внесено.",
+        )
+
+    def on_copy_failed(
+            self,
+            error: str,
+    ) -> None:
+
+        self.set_copy_processing_state(False)
+
+        QMessageBox.critical(
+            self,
+            "Ошибка копирования",
+            error,
         )
 
     def is_cloud_available(self) -> bool:
@@ -1832,8 +1857,6 @@ class MainWindow(QMainWindow):
 
         self.load_template_database_table()
         self.load_templates_to_eva_page()
-
-        self.load_template_database_table()
 
     def load_stopper_database_table(self):
         records = (
@@ -2340,7 +2363,7 @@ class MainWindow(QMainWindow):
             self.on_generation_finished
         )
 
-        self.generation_worker.errorOccurred.connect(
+        self.generation_worker.failed.connect(
             self.on_generation_error
         )
 
@@ -2348,7 +2371,7 @@ class MainWindow(QMainWindow):
             self.generation_thread.quit
         )
 
-        self.generation_worker.errorOccurred.connect(
+        self.generation_worker.failed.connect(
             self.generation_thread.quit
         )
 
@@ -2356,7 +2379,7 @@ class MainWindow(QMainWindow):
             self.generation_worker.deleteLater
         )
 
-        self.generation_worker.errorOccurred.connect(
+        self.generation_worker.failed.connect(
             self.generation_worker.deleteLater
         )
 
@@ -2668,7 +2691,7 @@ class MainWindow(QMainWindow):
             self.on_export_finished
         )
 
-        self.export_worker.errorOccurred.connect(
+        self.export_worker.failed.connect(
             self.on_export_error
         )
 
@@ -2676,7 +2699,7 @@ class MainWindow(QMainWindow):
             self.export_thread.quit
         )
 
-        self.export_worker.errorOccurred.connect(
+        self.export_worker.failed.connect(
             self.export_thread.quit
         )
 
@@ -2684,7 +2707,7 @@ class MainWindow(QMainWindow):
             self.export_worker.deleteLater
         )
 
-        self.export_worker.errorOccurred.connect(
+        self.export_worker.failed.connect(
             self.export_worker.deleteLater
         )
 
@@ -2945,7 +2968,7 @@ class MainWindow(QMainWindow):
             self.on_delete_finished
         )
 
-        self.delete_worker.errorOccurred.connect(
+        self.delete_worker.failed.connect(
             self.on_delete_error
         )
 
@@ -2953,7 +2976,7 @@ class MainWindow(QMainWindow):
             self.delete_thread.quit
         )
 
-        self.delete_worker.errorOccurred.connect(
+        self.delete_worker.failed.connect(
             self.delete_thread.quit
         )
 
@@ -2961,7 +2984,7 @@ class MainWindow(QMainWindow):
             self.delete_worker.deleteLater
         )
 
-        self.delete_worker.errorOccurred.connect(
+        self.delete_worker.failed.connect(
             self.delete_worker.deleteLater
         )
 
@@ -3158,7 +3181,7 @@ class MainWindow(QMainWindow):
             self.on_move_to_id_finished
         )
 
-        self.move_to_id_worker.errorOccurred.connect(
+        self.move_to_id_worker.failed.connect(
             self.on_move_to_id_error
         )
 
@@ -3166,7 +3189,7 @@ class MainWindow(QMainWindow):
             self.move_to_id_thread.quit
         )
 
-        self.move_to_id_worker.errorOccurred.connect(
+        self.move_to_id_worker.failed.connect(
             self.move_to_id_thread.quit
         )
 
@@ -3174,7 +3197,7 @@ class MainWindow(QMainWindow):
             self.move_to_id_worker.deleteLater
         )
 
-        self.move_to_id_worker.errorOccurred.connect(
+        self.move_to_id_worker.failed.connect(
             self.move_to_id_worker.deleteLater
         )
 

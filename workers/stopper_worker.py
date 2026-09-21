@@ -47,7 +47,7 @@ class StopperWorker(QObject):
                 try:
                     if self.action == "change":
                         result = self.editor.change_diameter(
-                            file_path=Path(file_path),
+                            file_path=file_path,
                             expected_diameter=self.expected_diameter,
                             new_diameter=self.new_diameter,
                         )
@@ -63,7 +63,7 @@ class StopperWorker(QObject):
 
                     elif self.action == "delete":
                         result = self.editor.delete_stoppers(
-                            file_path=Path(file_path),
+                            file_path=file_path,
                             expected_diameter=self.expected_diameter,
                         )
 

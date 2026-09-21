@@ -5,7 +5,8 @@ from models.copy_models import (
     SelectionState,
     CopyValidationIssue,
     CopyValidationResult,
-    ValidationIssueType, ValidationAction,
+    ValidationIssueType,
+    ValidationAction,
 )
 from services.copy_rules import CopyRuleService
 

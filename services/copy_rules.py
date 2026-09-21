@@ -1,5 +1,6 @@
 from database.repositories.copy_rule_repository import CopyRuleRepository
 
+
 class CopyRuleService:
 
     def __init__(

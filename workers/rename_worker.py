@@ -17,9 +17,7 @@ class RenameWorker(QObject):
     def run(self):
         result = RenameResult()
         total = len(self.files)
-        log_path = Path(
-            Path.home() / ".eva_logs"
-        )
+        log_path = Path.home() / ".eva_logs"
 
         try:
             for index, file in enumerate(

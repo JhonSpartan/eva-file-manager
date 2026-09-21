@@ -252,6 +252,17 @@ QCheckBox#headerCheckBox::indicator:indeterminate {
     image: url(resources/icons/checkbox-partial.svg);
 }
 
+QCheckBox#dstMasterCheckbox::indicator:indeterminate {
+    width: 13px;
+    height: 13px;
+
+    background-color: #2b3d4d;
+    border: 1px solid #56616e;
+    border-radius: 2px;
+
+    image: url(resources/icons/checkbox-partial.svg);
+}
+
 /* ==============================
    Table headers
    ============================== */
@@ -460,7 +471,8 @@ QWidget#sideMenu QPushButton {
    ============================== */
 
 QMessageBox QLabel {
-    min-width: 150px;
+    min-width: 360px;
+    qproperty-alignment: AlignLeft | AlignVCenter;
 }
 
 

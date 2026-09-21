@@ -108,6 +108,7 @@ class CopyArtsPage(QWidget):
         self.clearDstArtsButton = QPushButton("Очистить")
 
         self.dstMasterCheckbox = QCheckBox("Выбрать всё")
+        self.dstMasterCheckbox.setObjectName("dstMasterCheckbox")
         self.dstMasterCheckbox.setTristate(True)
 
 
