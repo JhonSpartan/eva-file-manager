@@ -16,14 +16,13 @@ class TriStateControlCheckBox(QCheckBox):
 
 class CopyArtsPage(QWidget):
 
-    loadArtsRequested = Signal(str)
-    addArtsRequested = Signal(str)
+    loadArtsRequested = Signal()
+    addArtsRequested = Signal()
     copyAndRenameRequested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.current_directory: str | None = None
         self.dstIdCheckboxes: dict[str, QCheckBox] = {}
 
         self.setup_ui()
@@ -228,7 +227,6 @@ class CopyArtsPage(QWidget):
             "artsTree": self.artsTree,
             "srcArts": self.srcArtsTree,
             "dstArts": self.dstArtsTree,
-            # "removeArts": self.removeArtNumbers,
             "copy": self.copyAndRenameButton,
             "clearSrc": self.clearSrcArtsButton,
             "removeDst": self.removeDstArtsButton,
@@ -380,10 +378,10 @@ class CopyArtsPage(QWidget):
 
 
     def on_load_arts_clicked(self):
-        self.loadArtsRequested.emit(self.current_directory)
+        self.loadArtsRequested.emit()
 
     def on_add_arts_clicked(self):
-        self.addArtsRequested.emit(self.current_directory)
+        self.addArtsRequested.emit()
 
     def on_copy_and_rename_clicked(self):
         self.copyAndRenameRequested.emit()

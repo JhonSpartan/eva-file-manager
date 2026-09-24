@@ -555,7 +555,7 @@ class MainWindow(QMainWindow):
             item.setData(Qt.UserRole, file_path)  # ПОЛНЫЙ ПУТЬ
             self.edit_page.files_to_rename_list.addItem(item)
 
-    def on_load_arts_requested(self, current_path: str | None):
+    def on_load_arts_requested(self):
         start_dir = self.last_directory
 
         directory = QFileDialog.getExistingDirectory(
@@ -573,8 +573,6 @@ class MainWindow(QMainWindow):
             "last_directory",
             directory,
         )
-        # сохраняем состояние
-        self.copy_page.current_directory = directory
 
         # обновляем UI
         self.copy_page.source_dir_input.setText(directory)
@@ -590,10 +588,7 @@ class MainWindow(QMainWindow):
 
         self.copy_page.artsTree.load_arts(art_paths)
 
-    def on_add_arts_requested(
-            self,
-            current_path: str | None,
-    ):
+    def on_add_arts_requested(self):
         start_dir = self.last_directory
 
         directory = QFileDialog.getExistingDirectory(

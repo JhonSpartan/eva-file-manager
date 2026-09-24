@@ -1,7 +1,6 @@
 import pathlib
 from pathlib import Path
 import ezdxf
-# if TYPE_CHECKING:
 from models.results import RenameResult, RenameFileResult, ReplaceResult
 
 
@@ -51,7 +50,7 @@ class FileService:
 
         return sorted(files, key=lambda path: str(path))
 
-    def rename_one_file(self, file: Path, result: "RenameResult") -> RenameFileResult:
+    def rename_one_file(self, file: Path, result: RenameResult) -> RenameFileResult:
         renamed = False
         need_rename = False
         new_file = file
@@ -245,7 +244,7 @@ class FileService:
             f.write("\n".join(logs) + "\n")
         logs.clear()
 
-    def replace_chars_in_one_file(self, file: Path, find_text: str, replace_text: str, result: "ReplaceResult") -> RenameFileResult:
+    def replace_chars_in_one_file(self, file: Path, find_text: str, replace_text: str, result: ReplaceResult) -> RenameFileResult:
         renamed = False
 
         if not file.is_file():
