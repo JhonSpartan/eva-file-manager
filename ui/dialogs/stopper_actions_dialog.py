@@ -162,6 +162,7 @@ class StopperActionsDialog(BaseDialog):
         except ValueError:
             return None
 
+
     def on_continue_clicked(self) -> None:
 
         if self.is_delete_stoppers():
@@ -182,12 +183,9 @@ class StopperActionsDialog(BaseDialog):
             )
             return
 
-        try:
-            diameter = float(
-                text.replace(",", ".")
-            )
+        diameter = self.get_new_diameter()
 
-        except ValueError:
+        if diameter is None:
             QMessageBox.warning(
                 self,
                 "Стоперы",

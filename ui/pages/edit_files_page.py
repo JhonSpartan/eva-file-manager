@@ -8,8 +8,8 @@ from PySide6.QtCore import Signal, QSize
 
 class EditFilesPage(QWidget):
 
-    loadFilesRequested = Signal(str)
-    addFilesRequested = Signal(str)
+    loadFilesRequested = Signal()
+    addFilesRequested = Signal()
     renameFilesRequested = Signal()
     removeFilesRequested = Signal()
     replaceRequested = Signal(str)
@@ -28,7 +28,6 @@ class EditFilesPage(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.current_directory: str | None = None
         self.setup_ui()
         self.setup_connections()
 
@@ -43,7 +42,7 @@ class EditFilesPage(QWidget):
             self.on_rename_files_clicked
         )
         self.find_input.textEdited.connect(
-            self.on_char_input
+            self.filterRequested.emit
         )
         self.replace_btn.clicked.connect(
             self.on_replace_clicked
@@ -303,14 +302,10 @@ class EditFilesPage(QWidget):
         }
 
     def on_load_files_clicked(self):
-        self.loadFilesRequested.emit(
-            self.current_directory
-        )
+        self.loadFilesRequested.emit()
 
     def on_add_files_clicked(self):
-        self.addFilesRequested.emit(
-            self.current_directory
-        )
+        self.addFilesRequested.emit()
 
     def on_rename_files_clicked(self):
         self.renameFilesRequested.emit()
@@ -318,12 +313,6 @@ class EditFilesPage(QWidget):
     def on_replace_clicked(self):
         find_text = self.find_input.text()
         self.replaceRequested.emit(
-            find_text
-        )
-
-    def on_char_input(self):
-        find_text = self.find_input.text()
-        self.filterRequested.emit(
             find_text
         )
 

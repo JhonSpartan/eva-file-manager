@@ -449,7 +449,7 @@ class MainWindow(QMainWindow):
         self.sync_thread = None
         self.sync_worker = None
 
-    def on_load_files_requested(self, current_path: str | None):
+    def on_load_files_requested(self):
         start_dir = self.last_directory
 
         directory = QFileDialog.getExistingDirectory(
@@ -467,8 +467,6 @@ class MainWindow(QMainWindow):
             "last_directory",
             directory,
         )
-        # сохраняем состояние
-        self.edit_page.current_directory = directory
 
         # обновляем UI
         self.edit_page.source_dir_input.setText(directory)
@@ -490,10 +488,7 @@ class MainWindow(QMainWindow):
             self.edit_page.find_input.text()
         )
 
-    def on_add_files_requested(
-            self,
-            current_path: str | None,
-    ):
+    def on_add_files_requested(self):
         start_dir = self.last_directory
 
         directory = QFileDialog.getExistingDirectory(

@@ -12,7 +12,6 @@ from PySide6.QtWidgets import (
 )
 
 
-
 class DatabaseTableWidget(QWidget):
 
     addRequested = Signal()
@@ -45,6 +44,9 @@ class DatabaseTableWidget(QWidget):
         self.addButton = QPushButton("+ Добавить")
         self.editButton = QPushButton("Изменить")
         self.deleteButton = QPushButton("Удалить")
+
+        self.editButton.setEnabled(False)
+        self.deleteButton.setEnabled(False)
 
         toolbar.addWidget(self.addButton)
         toolbar.addWidget(self.editButton)
@@ -288,6 +290,10 @@ class DatabaseTableWidget(QWidget):
 
         self.editButton.setEnabled(
             selected_count == 1
+        )
+
+        self.deleteButton.setEnabled(
+            selected_count > 0
         )
 
         total_count = self.table.rowCount()

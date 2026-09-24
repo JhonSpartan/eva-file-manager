@@ -166,6 +166,10 @@ class StopperSelectionDialog(BaseDialog):
             "Добавить стоперы"
         )
 
+        self.add_stoppers_button.setEnabled(
+            bool(self.confirmed_combinations)
+        )
+
         layout.addWidget(
             self.add_stoppers_button
         )
@@ -241,6 +245,8 @@ class StopperSelectionDialog(BaseDialog):
         )
 
         self.clear_current_combination()
+
+        self.add_stoppers_button.setEnabled(True)
 
     def clear_current_combination(self):
         for button in self.stopper_buttons:

@@ -10,6 +10,9 @@ from models.eva_models import (SessionTemplate, TemplateOrigin, PreviewTemplate,
 
 
 class EvaPage(QWidget):
+
+    FIVE_D_DISABLED_FOLDER_IDS = {1, 5}
+
     """
     Страница EVA.
     Только UI + сигналы. Без логики.
@@ -277,7 +280,7 @@ class EvaPage(QWidget):
 
             if (
                     self.five_d_mode
-                    and folder_id in {1, 5}
+                    and folder_id in self.FIVE_D_DISABLED_FOLDER_IDS
             ):
                 group.setEnabled(False)
 
@@ -291,15 +294,11 @@ class EvaPage(QWidget):
 
             add_custom_button = QPushButton()
 
-            add_custom_button.setFixedSize(
-                24,
-                24,
-            )
+            add_custom_button.setFixedSize(24,24)
 
             add_custom_button.setIcon(
                 QIcon("resources/icons/add.svg")
             )
-            add_custom_button.setFixedSize(24, 24)
             add_custom_button.setStyleSheet("""
                 QPushButton {
                     padding: 0px;
@@ -516,7 +515,7 @@ class EvaPage(QWidget):
             group.setEnabled(
                 not (
                         enabled
-                        and folder_id in {1, 5}
+                        and folder_id in self.FIVE_D_DISABLED_FOLDER_IDS
                 )
             )
 
@@ -525,8 +524,15 @@ class EvaPage(QWidget):
             prepared_evas: list[PreparedEva],
             preview_templates: list[PreviewTemplate],
     ):
-
         self.preview_tree.clear()
+
+        grouped_templates = {}
+
+        for template in preview_templates:
+            grouped_templates.setdefault(
+                template.destination_folder_id,
+                [],
+            ).append(template)
 
         for prepared_eva in prepared_evas:
             eva_item = QTreeWidgetItem(
@@ -545,14 +551,6 @@ class EvaPage(QWidget):
                 eva_item.addChild(
                     article_item
                 )
-
-                grouped_templates = {}
-
-                for template in preview_templates:
-                    grouped_templates.setdefault(
-                        template.destination_folder_id,
-                        [],
-                    ).append(template)
 
                 for folder_id in sorted(
                         grouped_templates

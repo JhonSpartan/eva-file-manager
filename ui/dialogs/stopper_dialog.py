@@ -81,9 +81,14 @@ class StopperDialog(BaseDialog):
             self.validate_and_accept
         )
 
-    def _is_float(self, value):
+    def _is_float(
+            self,
+            value: str,
+    ) -> bool:
         try:
-            float(value)
+            float(
+                value.replace(",", ".")
+            )
             return True
         except ValueError:
             return False
@@ -122,6 +127,10 @@ class StopperDialog(BaseDialog):
 
     def get_data(self) -> tuple[float, str]:
         return (
-            float(self.diameter_input.text()),
+            float(
+                self.diameter_input
+                .text()
+                .replace(",", ".")
+            ),
             self.stopper_name_input.text().strip(),
         )

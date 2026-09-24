@@ -85,9 +85,6 @@ class ArtsTree(QTreeWidget):
 
         for id_folder in id_folders:
 
-            if not id_folder.is_dir():
-                continue
-
             id_item = self._create_item(id_folder.name, id_folder, draggable=False)
 
             root_item.addChild(id_item)
@@ -177,10 +174,6 @@ class ArtsTree(QTreeWidget):
         else:
             event.ignore()
 
-        if event.mimeData().hasFormat(ART_MIME_TYPE):
-            event.acceptProposedAction()
-        else:
-            event.ignore()
 
     def _remove_art(self, path: Path):
         for index in range(self.topLevelItemCount()):
@@ -302,11 +295,7 @@ class ArtsTree(QTreeWidget):
         self.artsChanged.emit()
         self.checkStateChanged.emit()
 
-        self.artsChanged.emit()
-
-        event.setDropAction(
-            Qt.MoveAction
-        )
+        event.setDropAction(Qt.MoveAction)
         event.accept()
 
     def get_art_selections(self) -> list[ArtSelection]:

@@ -5,8 +5,8 @@ from PySide6.QtWidgets import (
     QPushButton,
     QHBoxLayout,
     QMessageBox,
+    QCheckBox
 )
-from PySide6.QtWidgets import QCheckBox
 
 from ui.dialogs.base_dialog import BaseDialog
 
@@ -43,7 +43,7 @@ class TemplateDialog(BaseDialog):
             has_stoppers
         )
 
-    def setup_ui(self):
+    def setup_ui(self) -> None:
         layout = QVBoxLayout(self)
 
         form_layout = QFormLayout()
@@ -93,7 +93,7 @@ class TemplateDialog(BaseDialog):
             self.validate_and_accept
         )
 
-    def validate_and_accept(self):
+    def validate_and_accept(self) -> None:
         folder_id = self.folder_id_input.text().strip()
         template_name = (
             self.template_name_input.text().strip()

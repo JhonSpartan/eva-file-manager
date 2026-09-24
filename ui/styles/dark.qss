@@ -6,6 +6,7 @@
 QWidget {
     background-color: #1b1f24;
     color: #d7dce2;
+    font-family: "Segoe UI";
     font-size: 13px;
 }
 
@@ -447,14 +448,6 @@ QProgressBar::chunk {
 /* ==============================
    Font
    ============================== */
-
-QWidget {
-    background-color: #1b1f24;
-    color: #d7dce2;
-
-    font-family: "Segoe UI";
-    font-size: 13px;
-}
 
 QGroupBox::title {
     font-size: 13px;
