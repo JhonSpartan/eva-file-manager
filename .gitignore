@@ -13,7 +13,6 @@ venv/
 
 # Logs
 *.log
-.eva_logs/
 
 # OS
 .DS_Store

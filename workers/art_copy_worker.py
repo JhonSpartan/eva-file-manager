@@ -1,9 +1,9 @@
-from pathlib import Path
 from PySide6.QtCore import QObject, Signal, Slot
+from config.settings import LOG_DIR
 from models.copy_models import CopyPlan
+from models.results import CopyArtResult
 from services.art_copy_service import ArtCopyService
 from services.file_service import FileService
-from models.results import CopyArtResult
 
 
 class ArtCopyWorker(QObject):
@@ -119,7 +119,7 @@ class ArtCopyWorker(QObject):
                     self.progress.emit(current, total)
 
             if result.errors:
-                log_path = Path.home() / ".eva_logs"
+                log_path = LOG_DIR
 
                 self.file_service.log_errors(
                     log_path,

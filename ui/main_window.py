@@ -65,6 +65,8 @@ from services.stopper_detector import StopperDetector
 from services.stopper_editor import StopperEditor
 from services.stopper_validator import StopperValidator
 
+from config.settings import DB_PATH, ensure_app_data
+
 
 class Ui_MainWindow:
     def setup_ui(self, MainWindow):
@@ -209,13 +211,9 @@ class MainWindow(QMainWindow):
 
         self.eva_service = EvaService()
 
-        db_path = Path.home() / ".eva" / "eva.db"
-        db_path.parent.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
+        ensure_app_data()
 
-        self.database = Database(db_path)
+        self.database = Database(DB_PATH)
         self.database.initialize()
 
         self.cloud_database = CloudDatabase()

@@ -1,6 +1,6 @@
-from pathlib import Path
 from database.cloud_database import CloudDatabase
 from database.database import Database
+from config.settings import DB_PATH
 
 
 SYNC_TABLES = (
@@ -184,14 +184,8 @@ def preflight_check(
 
 def main() -> None:
 
-    local_db_path = (
-        Path.home()
-        / ".eva"
-        / "eva.db"
-    )
-
     local_database = Database(
-        local_db_path
+        DB_PATH
     )
 
     cloud_database = CloudDatabase()

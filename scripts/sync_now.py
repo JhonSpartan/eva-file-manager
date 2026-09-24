@@ -1,4 +1,4 @@
-from pathlib import Path
+from config.settings import DB_PATH
 
 from database.cloud_database import CloudDatabase
 from database.database import Database
@@ -7,15 +7,11 @@ from services.sync_service import SyncService
 
 
 def main() -> None:
-    local_db_path = (
-        Path.home()
-        / ".eva"
-        / "eva.db"
+    
+    local_database = Database(
+        DB_PATH
     )
 
-    local_database = Database(
-        local_db_path
-    )
     local_database.initialize()
 
     cloud_database = CloudDatabase()
