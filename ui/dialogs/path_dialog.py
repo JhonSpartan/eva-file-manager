@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QFileDialog,
     QDialogButtonBox,
+    QCheckBox,
 )
 
 from ui.dialogs.base_dialog import BaseDialog
@@ -17,19 +18,29 @@ class PathDialog(BaseDialog):
     def __init__(
             self,
             current_path: Path | None = None,
+            show_use_default_option: bool = False,
+            use_default: bool = False,
             parent=None,
     ):
         super().__init__(parent)
+
+        self.show_use_default_option = (
+            show_use_default_option
+        )
 
         self.setWindowTitle(
             "Путь выгрузки EVA"
         )
 
-        self.setup_ui(current_path)
+        self.setup_ui(
+            current_path,
+            use_default,
+        )
 
     def setup_ui(
             self,
             current_path: Path | None,
+            use_default: bool,
     ):
         layout = QVBoxLayout(self)
 
@@ -62,6 +73,20 @@ class PathDialog(BaseDialog):
         )
 
         layout.addLayout(path_layout)
+
+        self.use_default_checkbox = QCheckBox(
+            "Использовать путь по умолчанию"
+        )
+        self.use_default_checkbox.setChecked(
+            use_default
+        )
+        self.use_default_checkbox.setVisible(
+            self.show_use_default_option
+        )
+
+        layout.addWidget(
+            self.use_default_checkbox
+        )
 
         self.buttons = QDialogButtonBox(
             QDialogButtonBox.Ok
@@ -117,3 +142,9 @@ class PathDialog(BaseDialog):
             return None
 
         return Path(path_text)
+
+    def use_default_path(self) -> bool:
+        return (
+            self.use_default_checkbox
+            .isChecked()
+        )

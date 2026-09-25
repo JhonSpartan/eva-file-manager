@@ -19,6 +19,7 @@ class ExportDialog(BaseDialog):
     def __init__(
             self,
             default_path: Path | None = None,
+            last_directory: str | None = None,
             parent=None,
     ):
         super().__init__(parent)
@@ -27,6 +28,7 @@ class ExportDialog(BaseDialog):
         self.setModal(True)
 
         self.default_path = default_path
+        self.last_directory = last_directory
 
         self.setup_ui()
         self.setup_connections()
@@ -148,6 +150,7 @@ class ExportDialog(BaseDialog):
         directory = QFileDialog.getExistingDirectory(
             self,
             "Выберите папку назначения",
+            self.last_directory or "",
         )
 
         if not directory:

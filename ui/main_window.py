@@ -198,14 +198,55 @@ class MainWindow(QMainWindow):
             "FileForge",
         )
 
-        self.last_directory = self.settings.value(
+        last_directory = self.settings.value(
             "last_directory",
             str(Path.home()),
-            type=str,
+        )
+
+        self.last_directory: str = (
+            last_directory
+            if isinstance(last_directory, str)
+            else str(Path.home())
         )
 
         if not Path(self.last_directory).is_dir():
             self.last_directory = str(Path.home())
+
+        eva_last_directory = self.settings.value(
+            "eva_last_directory",
+            str(Path.home()),
+        )
+
+        self.eva_last_directory: str = (
+            eva_last_directory
+            if isinstance(eva_last_directory, str)
+            else str(Path.home())
+        )
+
+        if not Path(self.eva_last_directory).is_dir():
+            self.eva_last_directory = str(Path.home())
+
+        files_last_directory = self.settings.value(
+            "files_last_directory",
+            str(Path.home()),
+        )
+
+        self.files_last_directory: str = (
+            files_last_directory
+            if isinstance(files_last_directory, str)
+            else str(Path.home())
+        )
+
+        if not Path(self.files_last_directory).is_dir():
+            self.files_last_directory = str(Path.home())
+
+        self.eva_use_default_output: bool = bool(
+            self.settings.value(
+                "eva_use_default_output",
+                True,
+                type=bool,
+            )
+        )
 
         self.file_service = FileService()
 
@@ -2268,11 +2309,8 @@ class MainWindow(QMainWindow):
         )
 
     def on_create_structure_requested(self):
-        use_default_path = (
-            self.eva_page
-            .use_default_path_checkbox
-            .isChecked()
-        )
+
+        use_default_path = self.eva_use_default_output
 
         if use_default_path:
             destination_root = (
@@ -2288,19 +2326,40 @@ class MainWindow(QMainWindow):
                 )
                 return
 
+
         else:
+
             selected_path = (
+
                 QFileDialog.getExistingDirectory(
+
                     self,
+
                     "Выберите папку для выгрузки",
+
+                    self.eva_last_directory,
+
                 )
+
             )
 
             if not selected_path:
                 return
 
+            self.eva_last_directory = selected_path
+
+            self.settings.setValue(
+
+                "eva_last_directory",
+
+                selected_path,
+
+            )
+
             destination_root = Path(
+
                 selected_path
+
             )
 
         generation_plan = (
@@ -2405,6 +2464,8 @@ class MainWindow(QMainWindow):
 
         dialog = PathDialog(
             current_path=current_path,
+            show_use_default_option=True,
+            use_default=self.eva_use_default_output,
             parent=self,
         )
 
@@ -2415,6 +2476,15 @@ class MainWindow(QMainWindow):
 
         if selected_path is None:
             return
+
+        use_default = dialog.use_default_path()
+
+        self.eva_use_default_output = use_default
+
+        self.settings.setValue(
+            "eva_use_default_output",
+            use_default,
+        )
 
         self.path_service.set_eva_default_output_path(
             selected_path
@@ -2597,6 +2667,7 @@ class MainWindow(QMainWindow):
 
         dialog = ExportDialog(
             default_path=default_path,
+            last_directory=self.files_last_directory,
             parent=self,
         )
 

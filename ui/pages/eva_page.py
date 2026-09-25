@@ -69,14 +69,6 @@ class EvaPage(QWidget):
             self.reset_templates_btn
         )
 
-        stoppers_controls_layout.addStretch()
-
-        stoppers_controls_layout.addWidget(
-            self.use_default_path_checkbox,
-            0,
-            Qt.AlignVCenter,
-        )
-
         stoppers_controls_layout.addWidget(
             self.five_d_mode_checkbox,
             0,
@@ -202,8 +194,6 @@ class EvaPage(QWidget):
         self.clear_template_selection_btn = QPushButton("Снять все галочки")
         self.clear_template_selection_btn.setMinimumHeight(35)
         self.five_d_mode_checkbox = QCheckBox("Режим 5D")
-        self.use_default_path_checkbox = QCheckBox("Путь по умолчанию")
-        self.use_default_path_checkbox.setChecked(True)
         self.reset_templates_btn = QPushButton("Сбросить шаблоны")
         self.reset_templates_btn.setMinimumHeight(35)
     # ---------- Logs / Templates ----------
