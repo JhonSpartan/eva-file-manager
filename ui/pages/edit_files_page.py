@@ -69,11 +69,7 @@ class EditFilesPage(QWidget):
             self.returnProcessedRequested.emit
         )
 
-        self.open_source_export_btn.clicked.connect(
-            self.openExportFolderRequested.emit
-        )
-
-        self.open_processed_export_btn.clicked.connect(
+        self.open_export_btn.clicked.connect(
             self.openExportFolderRequested.emit
         )
 
@@ -130,18 +126,11 @@ class EditFilesPage(QWidget):
             self.copy_source_btn
         )
 
-        self.open_source_export_btn = QPushButton(
-            "Открыть папку экспорта"
-        )
-
         left_layout.addWidget(
             self.files_to_rename_list
         )
         left_layout.addLayout(
             left_buttons_layout
-        )
-        left_layout.addWidget(
-            self.open_source_export_btn
         )
 
         # --- Right: Processed files ---
@@ -166,10 +155,6 @@ class EditFilesPage(QWidget):
 
         self.copy_processed_btn = QPushButton("Экспорт")
 
-        self.open_processed_export_btn = QPushButton(
-            "Открыть папку экспорта"
-        )
-
         right_layout.addWidget(
             self.renamed_files_list
         )
@@ -183,10 +168,6 @@ class EditFilesPage(QWidget):
 
         right_layout.addLayout(
             right_actions_layout
-        )
-
-        right_layout.addWidget(
-            self.open_processed_export_btn
         )
 
         main_layout.addWidget(
@@ -230,9 +211,29 @@ class EditFilesPage(QWidget):
             36
         )
 
-        buttons_layout.addWidget(
+        self.open_export_btn = QPushButton(
+            "Открыть папку экспорта"
+        )
+        self.open_export_btn.setMinimumHeight(
+            36
+        )
+
+        bottom_buttons_layout = QHBoxLayout()
+
+        bottom_buttons_layout.addWidget(
             self.remove_files_btn
         )
+
+        bottom_buttons_layout.addWidget(
+            self.open_export_btn
+        )
+
+        buttons_layout.addStretch()
+
+        buttons_layout.addLayout(
+            bottom_buttons_layout
+        )
+
         buttons_layout.addStretch()
 
         # --- Right: File actions ---
@@ -245,7 +246,7 @@ class EditFilesPage(QWidget):
 
         self.find_input = QLineEdit()
         self.replace_btn = QPushButton("Заменить")
-        self.stoppers_btn = QPushButton("Стоперы...")
+        self.stoppers_btn = QPushButton("Изменить / удалить стоперы")
 
         file_actions_layout.addWidget(
             QLabel("Найти текст")

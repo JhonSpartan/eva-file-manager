@@ -70,8 +70,27 @@ class CopyArtsPage(QWidget):
         all_articles_layout = QVBoxLayout(all_articles_group)
 
         self.artsTree = ArtsTree(ArtsTreeMode.AVAILABLE)
-
         all_articles_layout.addWidget(self.artsTree)
+
+        self.removeAvailableArtsButton = QPushButton("Удалить выбранные")
+        self.clearAvailableArtsButton = QPushButton("Очистить")
+
+        available_buttons_layout = QHBoxLayout()
+
+        available_buttons_layout.addWidget(
+            self.removeAvailableArtsButton
+        )
+
+        available_buttons_layout.addWidget(
+            self.clearAvailableArtsButton
+        )
+
+        available_buttons_layout.addStretch()
+
+        all_articles_layout.addLayout(
+            available_buttons_layout
+        )
+
         left_column.addWidget(all_articles_group)
 
         main_layout.addLayout(left_column, 1, 0)
@@ -180,22 +199,10 @@ class CopyArtsPage(QWidget):
         # ==================================================
         # === Buttons (row 3) ==============================
         # ==================================================
-        self.removeAvailableArtsButton = QPushButton("Удалить выбранные")
-        self.clearAvailableArtsButton = QPushButton("Очистить")
         self.copyAndRenameButton = QPushButton("Копировать и переименовать")
         self.fiveDModeCheckbox = QCheckBox("Режим 5D")
 
         bottom_layout = QHBoxLayout()
-
-        bottom_layout.addWidget(
-            self.removeAvailableArtsButton
-        )
-
-        bottom_layout.addWidget(
-            self.clearAvailableArtsButton
-        )
-
-        bottom_layout.addStretch()
 
         bottom_layout.addWidget(
             self.fiveDModeCheckbox
