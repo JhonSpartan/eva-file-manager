@@ -248,6 +248,14 @@ class MainWindow(QMainWindow):
             )
         )
 
+        self.files_use_default_output: bool = bool(
+            self.settings.value(
+                "files_use_default_output",
+                True,
+                type=bool,
+            )
+        )
+
         self.file_service = FileService()
 
         self.eva_service = EvaService()
@@ -1596,6 +1604,7 @@ class MainWindow(QMainWindow):
                 self.copy_page.dstArtsTree.refresh_art(
                     destination_plan.destination_art
                 )
+            self.copy_page.rebuild_dst_id_controls()
 
         self.current_copy_plan = None
 
@@ -2668,6 +2677,7 @@ class MainWindow(QMainWindow):
         dialog = ExportDialog(
             default_path=default_path,
             last_directory=self.files_last_directory,
+            use_default=self.files_use_default_output,
             parent=self,
         )
 
@@ -2686,6 +2696,16 @@ class MainWindow(QMainWindow):
                 "Не выбран путь для выгрузки.",
             )
             return
+
+        if not self.files_use_default_output:
+            self.files_last_directory = str(
+                destination_path
+            )
+
+            self.settings.setValue(
+                "files_last_directory",
+                self.files_last_directory,
+            )
 
         plan = self.export_planner.build_plan(
             files=files,
@@ -2852,6 +2872,8 @@ class MainWindow(QMainWindow):
 
         dialog = PathDialog(
             current_path=current_path,
+            show_use_default_option=True,
+            use_default=self.files_use_default_output,
             parent=self,
         )
 
@@ -2862,6 +2884,15 @@ class MainWindow(QMainWindow):
 
         if path is None:
             return
+
+        use_default = dialog.use_default_path()
+
+        self.files_use_default_output = use_default
+
+        self.settings.setValue(
+            "files_use_default_output",
+            use_default,
+        )
 
         self.path_service.set_files_default_output_path(
             path

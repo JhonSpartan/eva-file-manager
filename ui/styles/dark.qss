@@ -242,18 +242,10 @@ QTreeWidget::indicator:indeterminate {
     image: url(resources/icons/checkbox-partial.svg);
 }
 
-QCheckBox#headerCheckBox::indicator:indeterminate {
-    width: 13px;
-    height: 13px;
+QCheckBox#headerCheckBox::indicator:indeterminate,
+QCheckBox#dstMasterCheckbox::indicator:indeterminate,
+QCheckBox#dstIdControlCheckbox::indicator:indeterminate {
 
-    background-color: #2b3d4d;
-    border: 1px solid #56616e;
-    border-radius: 2px;
-
-    image: url(resources/icons/checkbox-partial.svg);
-}
-
-QCheckBox#dstMasterCheckbox::indicator:indeterminate {
     width: 13px;
     height: 13px;
 

@@ -4,7 +4,6 @@ from PySide6.QtWidgets import (
     QComboBox,
     QLineEdit,
     QPushButton,
-    QCheckBox,
     QFileDialog,
     QVBoxLayout,
     QHBoxLayout,
@@ -20,6 +19,7 @@ class ExportDialog(BaseDialog):
             self,
             default_path: Path | None = None,
             last_directory: str | None = None,
+            use_default: bool = True,
             parent=None,
     ):
         super().__init__(parent)
@@ -29,6 +29,7 @@ class ExportDialog(BaseDialog):
 
         self.default_path = default_path
         self.last_directory = last_directory
+        self.use_default = use_default
 
         self.setup_ui()
         self.setup_connections()
@@ -87,22 +88,13 @@ class ExportDialog(BaseDialog):
             path_layout
         )
 
-        self.use_default_path_checkbox = QCheckBox(
-            "Использовать путь экспорта по умолчанию"
-        )
-
-        if self.default_path is not None:
-            self.use_default_path_checkbox.setChecked(
-                True
-            )
-
+        if (
+            self.use_default
+            and self.default_path is not None
+        ):
             self.path_input.setText(
                 str(self.default_path)
             )
-
-        main_layout.addWidget(
-            self.use_default_path_checkbox
-        )
 
         buttons_layout = QHBoxLayout()
         buttons_layout.addStretch()
@@ -141,10 +133,6 @@ class ExportDialog(BaseDialog):
             self.on_browse_clicked
         )
 
-        self.use_default_path_checkbox.toggled.connect(
-            self.on_default_path_toggled
-        )
-
     def on_browse_clicked(self) -> None:
 
         directory = QFileDialog.getExistingDirectory(
@@ -158,28 +146,6 @@ class ExportDialog(BaseDialog):
 
         self.path_input.setText(
             directory
-        )
-
-        self.use_default_path_checkbox.setChecked(
-            False
-        )
-
-    def on_default_path_toggled(
-            self,
-            checked: bool,
-    ) -> None:
-
-        if not checked:
-            return
-
-        if self.default_path is None:
-            self.use_default_path_checkbox.setChecked(
-                False
-            )
-            return
-
-        self.path_input.setText(
-            str(self.default_path)
         )
 
     def get_level(self) -> ExportLevel:

@@ -71,6 +71,7 @@ class CopyValidationResult:
 class FileCopyOperation:
     source_file: Path
     destination_id: Path
+    destination_file: Path
 
 @dataclass
 class DestinationCopyPlan:

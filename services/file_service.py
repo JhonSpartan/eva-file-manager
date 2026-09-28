@@ -267,3 +267,4 @@ class FileService:
             result.failed.append(f"{new_file} (Ошибка: {e})")
 
         return self._file_result(file, new_file, renamed)
+

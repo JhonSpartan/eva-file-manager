@@ -83,15 +83,11 @@ class ArtCopyWorker(QObject):
                 for operation in destination_plan.copy_operations:
                     source_file = operation.source_file
                     destination_id = operation.destination_id
+                    destination_file = operation.destination_file
 
                     destination_id.mkdir(
                         parents=True,
                         exist_ok=True,
-                    )
-
-                    destination_file = (
-                            destination_id
-                            / source_file.name
                     )
 
                     self.copy_service.copy_file(

@@ -303,6 +303,10 @@ class CopyArtsPage(QWidget):
                 id_name
             )
 
+            checkbox.setObjectName(
+                "dstIdControlCheckbox"
+            )
+
             checkbox.setTristate(
                 True
             )
@@ -325,6 +329,8 @@ class CopyArtsPage(QWidget):
             self.dstIdCheckboxes[
                 id_name
             ] = checkbox
+
+        self.update_dst_master_checkbox()
 
     def on_dst_id_checkbox_changed(
             self,
