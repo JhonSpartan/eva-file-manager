@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtWidgets import QScrollArea, QProgressBar
 from models.eva_models import (SessionTemplate, TemplateOrigin, PreviewTemplate, PreparedEva)
+from utils.resource_path import resource_path
 
 
 class EvaPage(QWidget):
@@ -287,8 +288,16 @@ class EvaPage(QWidget):
             add_custom_button.setFixedSize(24,24)
 
             add_custom_button.setIcon(
-                QIcon("resources/icons/add.svg")
+                QIcon(
+                    str(
+                        resource_path(
+                            "icons",
+                            "add.svg",
+                        )
+                    )
+                )
             )
+
             add_custom_button.setStyleSheet("""
                 QPushButton {
                     padding: 0px;

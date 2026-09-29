@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 
 from models.eva_models import SessionTemplate, TemplateOrigin
 from ui.dialogs.base_dialog import BaseDialog
+from utils.resource_path import resource_path
 
 
 class CustomTemplateDialog(BaseDialog):
@@ -146,7 +147,14 @@ class CustomTemplateDialog(BaseDialog):
         )
 
         delete_button.setIcon(
-            QIcon("resources/icons/delete.svg")
+            QIcon(
+                str(
+                    resource_path(
+                        "icons",
+                        "delete.svg",
+                    )
+                )
+            )
         )
         delete_button.setToolTip(
             "Удалить шаблон"

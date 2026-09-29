@@ -37,6 +37,7 @@ from ui.pages.edit_files_page import EditFilesPage
 
 from services.file_service import FileService
 from services.art_service import ArtService
+from utils.resource_path import resource_path
 from workers.art_copy_worker import ArtCopyWorker
 from workers.rename_worker import RenameWorker
 from workers.replace_worker import ReplaceWorker
@@ -490,7 +491,14 @@ class MainWindow(QMainWindow):
         )
 
     def load_icons(self):
-        self.check_icon = QIcon("resources/icons/check.svg")
+        self.check_icon = QIcon(
+            str(
+                resource_path(
+                    "icons",
+                    "check.svg",
+                )
+            )
+        )
 
     def on_cloud_sync_thread_finished(self) -> None:
         self.sync_thread = None

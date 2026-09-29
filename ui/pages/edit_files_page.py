@@ -5,6 +5,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal, QSize
 
+from utils.resource_path import resource_path
+
 
 class EditFilesPage(QWidget):
 
@@ -144,7 +146,14 @@ class EditFilesPage(QWidget):
         self.return_processed_btn = QPushButton()
 
         self.return_processed_btn.setIcon(
-            QIcon("resources/icons/arrow_left.svg")
+            QIcon(
+                str(
+                    resource_path(
+                        "icons",
+                        "arrow_left.svg",
+                    )
+                )
+            )
         )
         self.return_processed_btn.setIconSize(
             QSize(20, 20)

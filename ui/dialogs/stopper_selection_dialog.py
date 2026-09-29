@@ -12,6 +12,7 @@ from models.catalog_models import StopperRecord
 from models.eva_models import StopperCombination
 from ui.dialogs.base_dialog import BaseDialog
 from widgets.stopper_button import StopperButton
+from utils.resource_path import resource_path
 
 
 class StopperSelectionDialog(BaseDialog):
@@ -279,7 +280,14 @@ class StopperSelectionDialog(BaseDialog):
 
         delete_button = QPushButton()
         delete_button.setIcon(
-            QIcon("resources/icons/delete.svg")
+            QIcon(
+                str(
+                    resource_path(
+                        "icons",
+                        "delete.svg",
+                    )
+                )
+            )
         )
         delete_button.setFixedSize(
             28,

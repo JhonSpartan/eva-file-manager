@@ -5,6 +5,7 @@ __pycache__/
 
 # Virtual env
 .venv/
+.venv_test/
 venv/
 
 # IDE
@@ -22,3 +23,7 @@ Thumbs.db
 *.ui.autosave
 
 .env
+
+# PyInstaller
+build/
+dist/
