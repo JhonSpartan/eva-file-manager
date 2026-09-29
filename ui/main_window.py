@@ -1498,21 +1498,68 @@ class MainWindow(QMainWindow):
             if dialog.clickedButton() != skip_button:
                 return
 
+        add_files_without_replacement = False
+
         if add_without_replace_issues:
             message = "\n".join(
                 issue.message
                 for issue in add_without_replace_issues
             )
 
-            answer = QMessageBox.question(
-                self,
-                "Подтверждение копирования",
-                message + "\n\nПродолжить без замены существующих файлов?",
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No,
+            dialog = QMessageBox(self)
+            dialog.setWindowTitle(
+                "Выбор способа копирования"
+            )
+            dialog.setIcon(
+                QMessageBox.Question
             )
 
-            if answer != QMessageBox.Yes:
+            dialog.setText(
+                "В целевых ID обнаружены новые файлы."
+            )
+
+            dialog.setInformativeText(
+                "Выберите способ копирования."
+            )
+
+            dialog.setDetailedText(
+                message
+            )
+
+            add_button = dialog.addButton(
+                "Добавить",
+                QMessageBox.AcceptRole,
+            )
+
+            replace_button = dialog.addButton(
+                "Заменить всё",
+                QMessageBox.DestructiveRole,
+            )
+
+            cancel_button = dialog.addButton(
+                "Отмена",
+                QMessageBox.RejectRole,
+            )
+
+            dialog.setDefaultButton(
+                cancel_button
+            )
+
+            self.localize_details_button(
+                dialog
+            )
+
+            dialog.exec()
+
+            clicked_button = dialog.clickedButton()
+
+            if clicked_button == add_button:
+                add_files_without_replacement = True
+
+            elif clicked_button == replace_button:
+                add_files_without_replacement = False
+
+            else:
                 return
 
         # 4. Строим готовый план
@@ -1520,6 +1567,9 @@ class MainWindow(QMainWindow):
             source,
             destination_selections,
             five_d_mode=five_d_mode,
+            add_files_without_replacement=(
+                add_files_without_replacement
+            ),
         )
 
         if plan.is_empty:

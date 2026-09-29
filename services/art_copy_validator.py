@@ -9,6 +9,7 @@ from models.copy_models import (
     ValidationAction,
 )
 from services.copy_rules import CopyRuleService
+from services.copy_file_naming import build_destination_file
 
 
 class ArtCopyValidator:
@@ -145,6 +146,11 @@ class ArtCopyValidator:
                 destination_id_path
             ]
 
+            is_redirected_5d = (
+                    five_d_mode
+                    and source_id_name != destination_id_name
+            )
+
             self._validate_existing_id(
                 source=source,
                 source_id_path=source_id_path,
@@ -153,6 +159,7 @@ class ArtCopyValidator:
                 destination_id_path=destination_id_path,
                 destination_state=destination_state,
                 result=result,
+                is_redirected_5d=is_redirected_5d,
             )
 
     def _add_missing_id_issue(
@@ -186,11 +193,9 @@ class ArtCopyValidator:
             destination_id_path: Path,
             destination_state: SelectionState,
             result: CopyValidationResult,
+            is_redirected_5d: bool,
     ):
-        if (
-                source_state == SelectionState.FULL
-                and destination_state == SelectionState.NONE
-        ):
+        if destination_state == SelectionState.NONE:
             result.issues.append(
                 CopyValidationIssue(
                     issue_type=ValidationIssueType.DESTINATION_ID_NOT_SELECTED,
@@ -200,27 +205,41 @@ class ArtCopyValidator:
                     message=(
                         f'ID "{destination_id_path.name}" уже существует в '
                         f'"{destination.art_path.name}", '
-                        f"но не выбран для замены."
+                        f"но не выбран для копирования."
                     )
                 )
             )
             return
 
         if (
-                source_state == SelectionState.PARTIAL
-                and destination_state == SelectionState.NONE
+                destination_state == SelectionState.FULL
+                and not is_redirected_5d
         ):
-            result.issues.append(
-                CopyValidationIssue(
-                    issue_type=ValidationIssueType.ADD_FILES_WITHOUT_REPLACEMENT,
-                    action=ValidationAction.CONFIRM,
-                    destination_art=destination.art_path,
-                    id_name=destination_id_path.name,
-                    message=(
-                        f'В ID "{destination_id_path.name}" артикула '
-                        f'"{destination.art_path.name}" '
-                        f"не выбраны файлы для замены."
+
+            source_files = source.files_by_id.get(
+                source_id_path,
+                [],
+            )
+
+            has_new_files = any(
+                not build_destination_file(
+                    source_file,
+                    destination_id_path,
+                ).exists()
+                for source_file in source_files
+            )
+
+            if has_new_files:
+                result.issues.append(
+                    CopyValidationIssue(
+                        issue_type=ValidationIssueType.ADD_FILES_WITHOUT_REPLACEMENT,
+                        action=ValidationAction.CONFIRM,
+                        destination_art=destination.art_path,
+                        id_name=destination_id_path.name,
+                        message=(
+                            f'В ID "{destination_id_path.name}" артикула '
+                            f'"{destination.art_path.name}" копируются '
+                            f"файлы, которых сейчас нет в целевом ID."
+                        ),
                     )
                 )
-            )
-            return

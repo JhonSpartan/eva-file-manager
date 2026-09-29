@@ -108,3 +108,4 @@ class CopyRule:
     mode: str
     from_id: str
     to_id: str
+

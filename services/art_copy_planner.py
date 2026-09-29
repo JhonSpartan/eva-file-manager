@@ -1,4 +1,5 @@
 from pathlib import Path
+from services.copy_file_naming import build_destination_file
 
 from models.copy_models import (
     ArtSelection,
@@ -25,34 +26,9 @@ class ArtCopyPlanner:
             destination_id: Path,
     ):
         for source_file in source_files:
-            name_parts = source_file.stem.split("_")
-
-            destination_eva = (
-                destination_id.parent.parent.name
-            )
-            destination_art = (
-                destination_id.parent.name
-            )
-            destination_id_name = (
-                destination_id.name
-            )
-
-            name_parts[0:1] = [
-                destination_eva
-            ]
-            name_parts[1:2] = [
-                destination_art
-            ]
-            name_parts[2:3] = [
-                destination_id_name
-            ]
-
-            destination_file = (
-                    destination_id
-                    / (
-                            "_".join(name_parts)
-                            + source_file.suffix.lower()
-                    )
+            destination_file = build_destination_file(
+                source_file,
+                destination_id,
             )
 
             plan.copy_operations.append(
@@ -68,6 +44,7 @@ class ArtCopyPlanner:
             source: ArtSelection,
             destination: ArtSelection,
             five_d_mode: bool,
+            add_files_without_replacement: bool,
     ) -> DestinationCopyPlan:
 
         plan = DestinationCopyPlan(
@@ -134,10 +111,7 @@ class ArtCopyPlanner:
                 [],
             )
 
-            if (
-                    source_state == SelectionState.FULL
-                    and destination_state == SelectionState.NONE
-            ):
+            if destination_state == SelectionState.NONE:
                 continue
 
             is_redirected_5d = (
@@ -145,10 +119,16 @@ class ArtCopyPlanner:
                     and source_id_name != destination_id_name
             )
 
-            if (
+            should_delete_destination_files = (
                     destination_state != SelectionState.NONE
                     and not is_redirected_5d
-            ):
+                    and not (
+                    add_files_without_replacement
+                    and destination_state == SelectionState.FULL
+            )
+            )
+
+            if should_delete_destination_files:
                 plan.files_to_delete.extend(
                     destination_files
                 )
@@ -166,6 +146,7 @@ class ArtCopyPlanner:
             source: ArtSelection,
             destinations: list[ArtSelection],
             five_d_mode: bool = False,
+            add_files_without_replacement: bool = False,
     ) -> CopyPlan:
 
         plan = CopyPlan(
@@ -177,6 +158,7 @@ class ArtCopyPlanner:
                 source,
                 destination,
                 five_d_mode,
+                add_files_without_replacement,
             )
 
             plan.destinations.append(destination_plan)
