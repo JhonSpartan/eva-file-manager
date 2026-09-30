@@ -1,10 +1,27 @@
 import os
 import shutil
+import sys
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 
-load_dotenv()
+def get_env_path() -> Path:
+    if getattr(sys, "frozen", False):
+        return (
+            Path(sys.executable).resolve().parent
+            / ".env"
+        )
+
+    return (
+        Path(__file__).resolve().parents[1]
+        / ".env"
+    )
+
+
+load_dotenv(
+    dotenv_path=get_env_path()
+)
 
 
 APP_DATA_DIR = Path.home() / ".fileforge"
