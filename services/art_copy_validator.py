@@ -212,6 +212,43 @@ class ArtCopyValidator:
             return
 
         if (
+                destination_state == SelectionState.PARTIAL
+                and not is_redirected_5d
+        ):
+            source_files = source.files_by_id.get(
+                source_id_path,
+                [],
+            )
+
+            selected_destination_files = destination.files_by_id.get(
+                destination_id_path,
+                [],
+            )
+
+            if self._has_unselected_file_conflict(
+                    source_files,
+                    destination_id_path,
+                    selected_destination_files,
+            ):
+                result.issues.append(
+                    CopyValidationIssue(
+                        issue_type=ValidationIssueType.FILE_NAME_CONFLICT,
+                        action=ValidationAction.BLOCK,
+                        destination_art=destination.art_path,
+                        id_name=destination_id_path.name,
+                        message=(
+                            f'В ID "{destination_id_path.name}" артикула '
+                            f'"{destination.art_path.name}" уже существует файл '
+                            f"с таким же именем, как у выбранного файла источника, "
+                            f"но этот файл не выбран для замены.\n\n"
+                            f"Проверьте выбор файлов или предварительно "
+                            f"переименуйте файл-источник."
+                        ),
+                    )
+                )
+                return
+
+        if (
                 destination_state == SelectionState.FULL
                 and not is_redirected_5d
         ):
@@ -243,3 +280,25 @@ class ArtCopyValidator:
                         ),
                     )
                 )
+
+    def _has_unselected_file_conflict(
+            self,
+            source_files: list[Path],
+            destination_id_path: Path,
+            selected_destination_files: list[Path],
+    ) -> bool:
+        selected_destination_files = set(selected_destination_files)
+
+        for source_file in source_files:
+            destination_file = build_destination_file(
+                source_file,
+                destination_id_path,
+            )
+
+            if (
+                    destination_file.exists()
+                    and destination_file not in selected_destination_files
+            ):
+                return True
+
+        return False

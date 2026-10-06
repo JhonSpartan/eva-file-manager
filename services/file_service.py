@@ -141,6 +141,8 @@ class FileService:
         if layer_name not in layers:
             return 0
 
+        self.normalize_insunits(doc)
+
         existing_texts = [e for e in msp.query('TEXT') if e.dxf.layer == layer_name]
 
         if existing_texts:
@@ -227,6 +229,16 @@ class FileService:
             layer_changes += 1
 
         return layer_changes
+
+    def normalize_insunits(self, doc) -> bool:
+        """Исправляет известные некорректные единицы DXF на сантиметры."""
+        insunits = doc.header.get("$INSUNITS")
+
+        if insunits in (1, 4, 6):
+            doc.header["$INSUNITS"] = 5
+            return True
+
+        return False
 
     def remove_defpoints_layer(self, doc, layer_to_remove):
         try:

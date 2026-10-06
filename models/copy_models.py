@@ -21,6 +21,7 @@ class ValidationIssueType(Enum):
     MISSING_DESTINATION_ID = auto()
     DESTINATION_ID_NOT_SELECTED = auto()
     ADD_FILES_WITHOUT_REPLACEMENT = auto()
+    FILE_NAME_CONFLICT = auto()
 
 class ValidationAction(Enum):
     BLOCK = auto()

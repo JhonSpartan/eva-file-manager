@@ -20,6 +20,7 @@ class PathDialog(BaseDialog):
             current_path: Path | None = None,
             show_use_default_option: bool = False,
             use_default: bool = False,
+            path_name: str = "EVA",
             parent=None,
     ):
         super().__init__(parent)
@@ -28,8 +29,10 @@ class PathDialog(BaseDialog):
             show_use_default_option
         )
 
+        self.path_name = path_name
+
         self.setWindowTitle(
-            "Путь выгрузки EVA"
+            f"Путь выгрузки {self.path_name}"
         )
 
         self.setup_ui(
@@ -46,7 +49,7 @@ class PathDialog(BaseDialog):
 
         layout.addWidget(
             QLabel(
-                "Путь выгрузки EVA "
+                f"Путь выгрузки {self.path_name} "
                 "по умолчанию:"
             )
         )

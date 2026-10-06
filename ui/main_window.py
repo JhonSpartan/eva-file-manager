@@ -101,7 +101,7 @@ class Ui_MainWindow:
             8
         )
 
-        self.btn_eva = QPushButton("EVA")
+        self.btn_eva = QPushButton("Создние файловой структуры")
         self.btn_other1 = QPushButton("Работа с артикулами")
         self.btn_other2 = QPushButton("Работа с файлами")
         self.btn_other3 = QPushButton("База данных")
@@ -270,6 +270,7 @@ class MainWindow(QMainWindow):
 
         self.cloud_sync_repository: CloudSyncRepository | None = None
         self.sync_service: SyncService | None = None
+        self.cloud_available = False
 
         self.copy_rule_repository = CopyRuleRepository(self.database)
         self.copy_rule_service = CopyRuleService(self.copy_rule_repository)
@@ -1718,10 +1719,7 @@ class MainWindow(QMainWindow):
         )
 
     def is_cloud_available(self) -> bool:
-        if (
-                self.cloud_sync_repository is None
-                or self.sync_service is None
-        ):
+        if not self.cloud_available:
             QMessageBox.warning(
                 self,
                 "Облако недоступно",
@@ -1807,6 +1805,7 @@ class MainWindow(QMainWindow):
             result: dict,
     ) -> None:
 
+        self.cloud_available = True
         self.database_page.set_cloud_online()
 
         self.load_template_database_table()
@@ -1819,6 +1818,7 @@ class MainWindow(QMainWindow):
             self,
             error: str,
     ) -> None:
+        self.cloud_available = False
         self.database_page.set_cloud_offline()
 
     def load_template_database_table(self):
@@ -2932,6 +2932,7 @@ class MainWindow(QMainWindow):
             current_path=current_path,
             show_use_default_option=True,
             use_default=self.files_use_default_output,
+            path_name="файлов",
             parent=self,
         )
 
