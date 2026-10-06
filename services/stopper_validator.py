@@ -24,18 +24,31 @@ class StopperValidator:
         )
 
         detected_diameter = (
-            detected_width_mm
-            + detected_height_mm
-        ) / 2
+                                    detected_width_mm
+                                    + detected_height_mm
+                            ) / 2
 
         difference = abs(
             detected_diameter
             - expected_diameter
         )
 
+        width_difference = abs(
+            detected_width_mm
+            - expected_diameter
+        )
+
+        height_difference = abs(
+            detected_height_mm
+            - expected_diameter
+        )
+
         is_valid = (
-            difference
-            <= self.DIAMETER_TOLERANCE_MM
+                width_difference
+                <= self.DIAMETER_TOLERANCE_MM
+                and
+                height_difference
+                <= self.DIAMETER_TOLERANCE_MM
         )
 
         return StopperValidationResult(
