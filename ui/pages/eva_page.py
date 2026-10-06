@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QScrollArea, QProgressBar
 from models.eva_models import (SessionTemplate, TemplateOrigin, PreviewTemplate, PreparedEva)
 from utils.resource_path import resource_path
 
+from ui.message_box import show_message
 
 class EvaPage(QWidget):
 
@@ -472,16 +473,18 @@ class EvaPage(QWidget):
         )
 
         if not eva_name:
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Не заполнено поле",
                 "Введите имя EVA.",
             )
             return
 
         if not articles:
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Не заполнено поле",
                 "Введите хотя бы один артикул.",
             )

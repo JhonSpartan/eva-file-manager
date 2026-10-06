@@ -456,7 +456,6 @@ QWidget#sideMenu QPushButton {
    ============================== */
 
 QMessageBox QLabel {
-    min-width: 360px;
     qproperty-alignment: AlignLeft | AlignVCenter;
 }
 

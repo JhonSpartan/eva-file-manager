@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 )
 
 from ui.dialogs.base_dialog import BaseDialog
+from ui.message_box import show_message
 
 
 class StopperDialog(BaseDialog):
@@ -100,24 +101,27 @@ class StopperDialog(BaseDialog):
         )
 
         if not diameter:
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Некорректные данные",
                 "Укажите диаметр.",
             )
             return
 
         if not self._is_float(diameter):
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Некорректные данные",
                 "Диаметр должен быть числом.",
             )
             return
 
         if not stopper_name:
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Некорректные данные",
                 "Укажите название стопера.",
             )

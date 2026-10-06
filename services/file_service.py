@@ -1,6 +1,7 @@
 import pathlib
 from pathlib import Path
 import ezdxf
+from ezdxf.math import Matrix44
 from models.results import RenameResult, RenameFileResult, ReplaceResult
 
 
@@ -94,7 +95,7 @@ class FileService:
             result.errors.append(f"Некорректная EVA в файле {file}")
             need_rename = True
 
-        rename_inner_res = self.rename_inner(file, file_art, name, file_id)
+        rename_inner_res = self.rename_inner(file, file_art, name, file_id, result)
 
         if rename_inner_res:
             result.renamed_layers += rename_inner_res
@@ -121,6 +122,7 @@ class FileService:
             file_art: str,
             filename: str,
             file_id: str,
+            result: RenameResult,
     ) -> int:
         layer_changes = 0
 
@@ -141,7 +143,8 @@ class FileService:
         if layer_name not in layers:
             return 0
 
-        self.normalize_insunits(doc)
+        if self.normalize_insunits(doc):
+            result.normalized_units += 1
 
         existing_texts = [e for e in msp.query('TEXT') if e.dxf.layer == layer_name]
 
@@ -231,14 +234,21 @@ class FileService:
         return layer_changes
 
     def normalize_insunits(self, doc) -> bool:
-        """Исправляет известные некорректные единицы DXF на сантиметры."""
+        """Исправляет ошибочный экспорт DXF с INSUNITS=1."""
         insunits = doc.header.get("$INSUNITS")
 
-        if insunits in (1, 4, 6):
-            doc.header["$INSUNITS"] = 5
-            return True
+        if insunits != 1:
+            return False
 
-        return False
+        msp = doc.modelspace()
+        transform = Matrix44.scale(2.54, 2.54, 2.54)
+
+        for entity in msp:
+            entity.transform(transform)
+
+        doc.header["$INSUNITS"] = 5
+
+        return True
 
     def remove_defpoints_layer(self, doc, layer_to_remove):
         try:

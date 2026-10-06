@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 
 from ui.dialogs.base_dialog import BaseDialog
+from ui.message_box import show_message
 
 
 class TemplateDialog(BaseDialog):
@@ -100,24 +101,27 @@ class TemplateDialog(BaseDialog):
         )
 
         if not folder_id:
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Некорректные данные",
                 "Укажите ID папки.",
             )
             return
 
         if not folder_id.isdigit():
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Некорректные данные",
                 "ID папки должен быть числом.",
             )
             return
 
         if not template_name:
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Некорректные данные",
                 "Укажите название шаблона.",
             )

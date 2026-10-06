@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 
 from models.catalog_models import StopperRecord
 from ui.dialogs.base_dialog import BaseDialog
+from ui.message_box import show_message
 
 
 class StopperActionsDialog(BaseDialog):
@@ -176,8 +177,9 @@ class StopperActionsDialog(BaseDialog):
         )
 
         if not text:
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Стоперы",
                 "Укажите новый диаметр.",
             )
@@ -186,16 +188,18 @@ class StopperActionsDialog(BaseDialog):
         diameter = self.get_new_diameter()
 
         if diameter is None:
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Стоперы",
                 "Некорректный диаметр.",
             )
             return
 
         if diameter <= 0:
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Стоперы",
                 "Диаметр должен быть больше нуля.",
             )

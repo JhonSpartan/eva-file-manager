@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QHBoxLayout,
     QStackedWidget, QMessageBox, QFileDialog, QListWidgetItem, QDialog
 )
-from PySide6.QtGui import QFont, QIcon, QDesktopServices
+from PySide6.QtGui import QFont, QIcon, QDesktopServices, QFontMetrics
 from PySide6.QtCore import Qt, QUrl, QThread, QSettings, QTimer
 from pathlib import Path
 
@@ -65,6 +65,8 @@ from services.move_to_id_planner import MoveToIdPlanner
 from services.stopper_detector import StopperDetector
 from services.stopper_editor import StopperEditor
 from services.stopper_validator import StopperValidator
+
+from ui.message_box import show_message
 
 from config.settings import DB_PATH, ensure_app_data
 
@@ -532,7 +534,12 @@ class MainWindow(QMainWindow):
             file_paths = self.file_service.load_files(directory)
             self.files_to_rename = file_paths
         except ValueError as e:
-            QMessageBox.warning(self, "Ошибка", str(e))
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
+                "Ошибка",
+                str(e)
+            )
             return
 
         self.edit_page.files_to_rename_list.clear()
@@ -568,8 +575,9 @@ class MainWindow(QMainWindow):
                 directory
             )
         except ValueError as e:
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Ошибка",
                 str(e),
             )
@@ -632,7 +640,12 @@ class MainWindow(QMainWindow):
         try:
             art_paths = self.art_service.load_arts(directory)
         except ValueError as e:
-            QMessageBox.warning(self, "Ошибка", str(e))
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
+                "Ошибка",
+                str(e)
+            )
             return
 
         self.copy_page.copyAndRenamePbar.setValue(0)
@@ -663,8 +676,9 @@ class MainWindow(QMainWindow):
                 directory
             )
         except ValueError as e:
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Ошибка",
                 str(e),
             )
@@ -748,8 +762,9 @@ class MainWindow(QMainWindow):
             self,
             error: str,
     ) -> None:
-        QMessageBox.critical(
-            self,
+        show_message(
+    self,
+    QMessageBox.Icon.Critical,
             "Ошибка переименования",
             error,
         )
@@ -761,11 +776,27 @@ class MainWindow(QMainWindow):
         summary = []
 
         if result.renamed_files:
-            summary.append(f"Переименовано файлов: {result.renamed_files}.")
-        if result.renamed_layers:
-            summary.append(f'Обновлено слоёв "nadpis": {result.renamed_layers}.')
+            summary.append(
+                f"Переименовано файлов: {result.renamed_files}."
+            )
 
-        QMessageBox.information(self, "Готово", "\n".join(summary) or "Изменений не внесено.")
+        if result.renamed_layers:
+            summary.append(
+                f'Обновлено слоёв "nadpis": {result.renamed_layers}.'
+            )
+
+        if result.normalized_units:
+            summary.append(
+                f"Исправлена система единиц: {result.normalized_units}."
+            )
+
+        show_message(
+    self,
+    QMessageBox.Icon.Information,
+            "Готово",
+            "\n".join(summary) or "Изменений не внесено.",
+        )
+
         self.files_to_rename.clear()
         self.set_processing_state(False)
 
@@ -828,8 +859,9 @@ class MainWindow(QMainWindow):
                 for path in plan.conflicts
             )
 
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Конфликт замены",
                 (
                     "Некоторые целевые файлы уже существуют:\n\n"
@@ -840,8 +872,9 @@ class MainWindow(QMainWindow):
             return
 
         if plan.is_empty:
-            QMessageBox.information(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Information,
                 "Нет действий",
                 "Нет файлов для обработки.",
             )
@@ -1002,8 +1035,9 @@ class MainWindow(QMainWindow):
 
         self.set_processing_state(False)
 
-        QMessageBox.information(
-            self,
+        show_message(
+    self,
+    QMessageBox.Icon.Information,
             "Готово",
             f"Обработано файлов: {processed_count}",
         )
@@ -1015,8 +1049,9 @@ class MainWindow(QMainWindow):
 
         self.set_processing_state(False)
 
-        QMessageBox.critical(
-            self,
+        show_message(
+    self,
+    QMessageBox.Icon.Critical,
             "Ошибка замены",
             message,
         )
@@ -1037,7 +1072,13 @@ class MainWindow(QMainWindow):
         if result.failed:
             summary.append(f"Ошибок при обработке файлов: {len(result.failed)}\n" + "\n".join(result.failed))
         summary = "\n\n".join(summary) if summary else "Изменений не внесено."
-        QMessageBox.information(self, "Готово", summary)
+
+        show_message(
+    self,
+    QMessageBox.Icon.Information,
+            "Готово",
+            summary
+        )
 
         self.set_processing_state(False)
 
@@ -1066,8 +1107,9 @@ class MainWindow(QMainWindow):
 
         # Проверяем Find text
         if not find_text:
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Стоперы",
                 "Поле поиска пустое.",
             )
@@ -1082,8 +1124,9 @@ class MainWindow(QMainWindow):
             stopper_name = stopper_name[1:]
 
         if not stopper_name:
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Стоперы",
                 "Некорректное название стопера.",
             )
@@ -1096,8 +1139,9 @@ class MainWindow(QMainWindow):
         )
 
         if stopper is None:
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Стоперы",
                 (
                     "Текст поиска не соответствует "
@@ -1135,8 +1179,9 @@ class MainWindow(QMainWindow):
             files.append(file_path)
 
         if not files:
-            QMessageBox.information(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Information,
                 "Стоперы",
                 "Нет файлов для обработки.",
             )
@@ -1204,8 +1249,9 @@ class MainWindow(QMainWindow):
         # Неизвестные шаблоны считаем небезопасной
         # ситуацией и полностью отменяем операцию
         if unknown_files:
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Стоперы",
                 (
                     "Некоторые шаблоны не найдены "
@@ -1218,8 +1264,9 @@ class MainWindow(QMainWindow):
         # Среди выбранных файлов вообще нет
         # шаблонов со стопперами
         if not files_with_stoppers:
-            QMessageBox.information(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Information,
                 "Стоперы",
                 (
                     "Выбранные шаблоны "
@@ -1346,8 +1393,9 @@ class MainWindow(QMainWindow):
         )
 
         if not has_source_files:
-            QMessageBox.information(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Information,
                 "Нет файлов для копирования",
                 "В выбранной исходной папке нет файлов для копирования."
             )
@@ -1371,6 +1419,14 @@ class MainWindow(QMainWindow):
             dialog.setInformativeText(
                 "Копирование не может быть продолжено."
             )
+
+            label = dialog.findChild(
+                QLabel,
+                "qt_msgbox_label",
+            )
+
+            if label:
+                label.setMinimumWidth(300)
 
             dialog.setDetailedText(message)
 
@@ -1582,10 +1638,11 @@ class MainWindow(QMainWindow):
         )
 
         if plan.is_empty:
-            QMessageBox.information(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Information,
                 "Нет выбранных артикулов",
-                "Не выбрано ни одного целевого артикула для копирования."
+                "Не выбрано ни одного целевого артикула для копирования.",
             )
             return
 
@@ -1650,8 +1707,9 @@ class MainWindow(QMainWindow):
         self.set_copy_processing_state(False)
 
         if isinstance(result, Exception):
-            QMessageBox.critical(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Critical,
                 "Ошибка копирования",
                 str(result),
             )
@@ -1699,8 +1757,9 @@ class MainWindow(QMainWindow):
                 f"Ошибок: {len(result.errors)}."
             )
 
-        QMessageBox.information(
-            self,
+        show_message(
+    self,
+    QMessageBox.Icon.Information,
             "Готово",
             "\n".join(summary) or "Изменений не внесено.",
         )
@@ -1712,16 +1771,18 @@ class MainWindow(QMainWindow):
 
         self.set_copy_processing_state(False)
 
-        QMessageBox.critical(
-            self,
+        show_message(
+    self,
+    QMessageBox.Icon.Critical,
             "Ошибка копирования",
             error,
         )
 
     def is_cloud_available(self) -> bool:
         if not self.cloud_available:
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Облако недоступно",
                 (
                     "Облачная база данных недоступна.\n\n"
@@ -2386,8 +2447,8 @@ class MainWindow(QMainWindow):
             )
 
             if destination_root is None:
-                QMessageBox.warning(
-                    self,
+                show_message(
+                    QMessageBox.Icon.Warning,
                     "Путь не задан",
                     "Путь по умолчанию не настроен.",
                 )
@@ -2440,8 +2501,9 @@ class MainWindow(QMainWindow):
         )
 
         if generation_plan.is_empty:
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Нет файлов",
                 "Не выбраны шаблоны для создания.",
             )
@@ -2582,8 +2644,9 @@ class MainWindow(QMainWindow):
             destination_root.exists()
         )
 
-        QMessageBox.information(
-            self,
+        show_message(
+    self,
+    QMessageBox.Icon.Information,
             "Готово",
             (
                 "Структура успешно создана.\n\n"
@@ -2600,8 +2663,9 @@ class MainWindow(QMainWindow):
             True
         )
 
-        QMessageBox.critical(
-            self,
+        show_message(
+    self,
+    QMessageBox.Icon.Critical,
             "Ошибка",
             message,
         )
@@ -2616,8 +2680,9 @@ class MainWindow(QMainWindow):
                 last_output_path is None
                 or not last_output_path.exists()
         ):
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Папка не найдена",
                 "Последняя выгрузка EVA не найдена.",
             )
@@ -2720,8 +2785,9 @@ class MainWindow(QMainWindow):
     ) -> None:
 
         if not files:
-            QMessageBox.information(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Information,
                 "Нет объектов для экспорта",
                 "Нет файлов для выгрузки.",
             )
@@ -2748,8 +2814,9 @@ class MainWindow(QMainWindow):
         )
 
         if destination_path is None:
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Экспорт",
                 "Не выбран путь для выгрузки.",
             )
@@ -2777,8 +2844,9 @@ class MainWindow(QMainWindow):
                 for path in plan.conflicts
             )
 
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Конфликт экспорта",
                 (
                     "Некоторые объекты уже существуют "
@@ -2791,8 +2859,9 @@ class MainWindow(QMainWindow):
             return
 
         if plan.is_empty:
-            QMessageBox.information(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Information,
                 "Нет объектов для экспорта",
                 "Нет объектов для выгрузки.",
             )
@@ -2897,8 +2966,9 @@ class MainWindow(QMainWindow):
 
         self.pending_export_path = None
 
-        QMessageBox.information(
-            self,
+        show_message(
+    self,
+    QMessageBox.Icon.Information,
             "Экспорт завершён",
             (
                 "Выгрузка завершена.\n\n"
@@ -2915,8 +2985,9 @@ class MainWindow(QMainWindow):
         self.set_processing_state(False)
         self.pending_export_path = None
 
-        QMessageBox.critical(
-            self,
+        show_message(
+    self,
+    QMessageBox.Icon.Critical,
             "Ошибка экспорта",
             message,
         )
@@ -2987,8 +3058,9 @@ class MainWindow(QMainWindow):
                 last_output_path is None
                 or not last_output_path.exists()
         ):
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Папка не найдена",
                 "Последняя выгрузка файлов не найдена.",
             )
@@ -3009,8 +3081,9 @@ class MainWindow(QMainWindow):
         files = self.get_visible_working_files()
 
         if not files:
-            QMessageBox.information(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Information,
                 "Нет объектов для удаления",
                 "Нет файлов для удаления.",
             )
@@ -3031,8 +3104,9 @@ class MainWindow(QMainWindow):
         )
 
         if plan.is_empty:
-            QMessageBox.information(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Information,
                 "Нет объектов для удаления",
                 "Нет объектов для удаления.",
             )
@@ -3167,8 +3241,9 @@ class MainWindow(QMainWindow):
 
         self.set_processing_state(False)
 
-        QMessageBox.information(
-            self,
+        show_message(
+    self,
+    QMessageBox.Icon.Information,
             "Удаление завершено",
             (
                 "Удаление завершено.\n\n"
@@ -3184,8 +3259,9 @@ class MainWindow(QMainWindow):
 
         self.set_processing_state(False)
 
-        QMessageBox.critical(
-            self,
+        show_message(
+    self,
+    QMessageBox.Icon.Critical,
             "Ошибка удаления",
             message,
         )
@@ -3235,8 +3311,9 @@ class MainWindow(QMainWindow):
         files = self.get_visible_working_files()
 
         if not files:
-            QMessageBox.information(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Information,
                 "Нет файлов для перемещения",
                 "Нет файлов для перемещения.",
             )
@@ -3263,8 +3340,9 @@ class MainWindow(QMainWindow):
             )
 
         except ValueError as error:
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Перемещение в ID",
                 str(error),
             )
@@ -3276,8 +3354,9 @@ class MainWindow(QMainWindow):
                 for path in plan.conflicts
             )
 
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Конфликт перемещения",
                 (
                     "Некоторые целевые файлы "
@@ -3289,8 +3368,9 @@ class MainWindow(QMainWindow):
             return
 
         if plan.is_empty:
-            QMessageBox.information(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Information,
                 "Нет файлов для перемещения",
                 (
                     "Нет файлов для перемещения.\n"
@@ -3388,8 +3468,9 @@ class MainWindow(QMainWindow):
 
         self.set_processing_state(False)
 
-        QMessageBox.critical(
-            self,
+        show_message(
+    self,
+    QMessageBox.Icon.Critical,
             "Ошибка перемещения",
             message,
         )
@@ -3431,8 +3512,9 @@ class MainWindow(QMainWindow):
 
         self.set_processing_state(False)
 
-        QMessageBox.information(
-            self,
+        show_message(
+    self,
+    QMessageBox.Icon.Information,
             "Перемещение завершено",
             (
                 "Перемещение завершено.\n\n"
@@ -3524,8 +3606,9 @@ class MainWindow(QMainWindow):
                 f"в файлах: {result['deleted_files']}"
             )
 
-        QMessageBox.information(
-            self,
+        show_message(
+    self,
+    QMessageBox.Icon.Information,
             "Стоперы",
             message,
         )
@@ -3534,13 +3617,12 @@ class MainWindow(QMainWindow):
             self,
             error: str,
     ) -> None:
-        QMessageBox.critical(
-            self,
+        show_message(
+    self,
+    QMessageBox.Icon.Critical,
             "Стоперы",
-            (
-                "Ошибка операции со стоперами.\n\n"
-                f"{error}"
-            ),
+            "Ошибка операции со стоперами.\n\n"
+            f"{error}",
         )
 
     def on_stopper_progress(
@@ -3604,16 +3686,18 @@ class MainWindow(QMainWindow):
     ) -> None:
 
         if self.last_export_path is None:
-            QMessageBox.information(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Information,
                 "Экспорт",
                 "Выгрузка ещё не выполнялась.",
             )
             return
 
         if not self.last_export_path.exists():
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Экспорт",
                 "Папка последней выгрузки больше не существует.",
             )
@@ -3660,6 +3744,16 @@ class MainWindow(QMainWindow):
                 button.setText(
                     "Скрыть подробности..."
                 )
+
+            text_width = QFontMetrics(
+                button.font()
+            ).horizontalAdvance(
+                button.text()
+            )
+
+            button.setMinimumWidth(
+                text_width + 40
+            )
 
             if not button.property(
                     "detailsLocalizationConnected"

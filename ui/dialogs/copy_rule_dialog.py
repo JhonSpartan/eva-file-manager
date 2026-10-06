@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
 )
 
 from ui.dialogs.base_dialog import BaseDialog
+from ui.message_box import show_message
 
 
 class CopyRuleDialog(BaseDialog):
@@ -89,24 +90,27 @@ class CopyRuleDialog(BaseDialog):
         to_id = self.to_id_input.text().strip()
 
         if not mode:
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Некорректные данные",
                 "Укажите режим.",
             )
             return
 
         if not from_id:
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Некорректные данные",
                 "Укажите исходный ID.",
             )
             return
 
         if not to_id:
-            QMessageBox.warning(
-                self,
+            show_message(
+    self,
+    QMessageBox.Icon.Warning,
                 "Некорректные данные",
                 "Укажите целевой ID.",
             )
