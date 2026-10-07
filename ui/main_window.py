@@ -407,6 +407,9 @@ class MainWindow(QMainWindow):
         self.edit_page.deleteSourceRequested.connect(
             self.on_delete_source_requested
         )
+        self.edit_page.filesDropped.connect(
+            self.on_files_dropped
+        )
 
         self.database_page.templatesTable.addRequested.connect(
             self.on_add_template
@@ -543,7 +546,6 @@ class MainWindow(QMainWindow):
             return
 
         self.edit_page.files_to_rename_list.clear()
-        self.edit_page.renamed_files_list.clear()
         self.edit_page.editFilesPbar.setValue(0)
         # рендерим
         self.render_files(file_paths)
@@ -2710,12 +2712,28 @@ class MainWindow(QMainWindow):
             self.edit_page.files_to_rename_list
         )
 
+        existing_paths = {
+            working_list.item(row).data(Qt.UserRole)
+            for row in range(working_list.count())
+        }
+
         while processed_list.count() > 0:
             item = processed_list.takeItem(0)
+
+            file_path = item.data(
+                Qt.UserRole
+            )
+
+            if file_path in existing_paths:
+                continue
 
             item.setIcon(QIcon())
 
             working_list.addItem(item)
+
+            existing_paths.add(
+                file_path
+            )
 
         self.sync_files_to_rename_from_ui()
 
@@ -3771,3 +3789,44 @@ class MainWindow(QMainWindow):
                         )
                     )
                 )
+
+    def on_files_dropped(
+            self,
+            paths: list[Path],
+    ) -> None:
+
+        new_file_paths = (
+            self.file_service.collect_dxf_files(
+                paths
+            )
+        )
+
+        existing_paths = set(
+            self.files_to_rename
+        )
+
+        files_to_add = []
+
+        for file_path in new_file_paths:
+            if file_path in existing_paths:
+                continue
+
+            files_to_add.append(
+                file_path
+            )
+
+            existing_paths.add(
+                file_path
+            )
+
+        self.files_to_rename.extend(
+            files_to_add
+        )
+
+        self.render_files(
+            files_to_add
+        )
+
+        self.filter_files(
+            self.edit_page.find_input.text()
+        )

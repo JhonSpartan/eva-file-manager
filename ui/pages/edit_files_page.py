@@ -4,8 +4,9 @@ from PySide6.QtWidgets import (
     QProgressBar, QVBoxLayout, QHBoxLayout, QGridLayout, QGroupBox
 )
 from PySide6.QtCore import Signal, QSize
-
 from utils.resource_path import resource_path
+
+from widgets.file_droplist import FileDropListWidget
 
 
 class EditFilesPage(QWidget):
@@ -26,6 +27,7 @@ class EditFilesPage(QWidget):
     openExportFolderRequested = Signal()
 
     copyProcessedRequested = Signal()
+    filesDropped = Signal(list)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -74,6 +76,12 @@ class EditFilesPage(QWidget):
         self.open_export_btn.clicked.connect(
             self.openExportFolderRequested.emit
         )
+        self.clear_processed_btn.clicked.connect(
+            self.renamed_files_list.clear
+        )
+        self.files_to_rename_list.pathsDropped.connect(
+            self.filesDropped.emit
+        )
 
     def setup_ui(self):
         main_layout = QGridLayout(self)
@@ -106,7 +114,7 @@ class EditFilesPage(QWidget):
         left_group = QGroupBox("Файлы для переименования")
         left_layout = QVBoxLayout(left_group)
 
-        self.files_to_rename_list = QListWidget()
+        self.files_to_rename_list = FileDropListWidget()
 
         left_buttons_layout = QHBoxLayout()
 
@@ -163,6 +171,7 @@ class EditFilesPage(QWidget):
         )
 
         self.copy_processed_btn = QPushButton("Экспорт")
+        self.clear_processed_btn = QPushButton("Очистить")
 
         right_layout.addWidget(
             self.renamed_files_list
@@ -173,6 +182,9 @@ class EditFilesPage(QWidget):
         )
         right_actions_layout.addWidget(
             self.copy_processed_btn
+        )
+        right_actions_layout.addWidget(
+            self.clear_processed_btn
         )
 
         right_layout.addLayout(
@@ -214,7 +226,7 @@ class EditFilesPage(QWidget):
         )
 
         self.remove_files_btn = QPushButton(
-            "Очистить списки"
+            "Очистить все списки"
         )
         self.remove_files_btn.setMinimumHeight(
             36

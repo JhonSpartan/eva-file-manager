@@ -290,3 +290,25 @@ class FileService:
 
         return self._file_result(file, new_file, renamed)
 
+    def collect_dxf_files(
+            self,
+            paths: list[Path],
+    ) -> list[Path]:
+
+        result = []
+
+        for path in paths:
+            if path.is_file():
+                if path.suffix.lower() == ".dxf":
+                    result.append(path)
+
+            elif path.is_dir():
+                result.extend(
+                    file_path
+                    for file_path in path.rglob("*.dxf")
+                    if file_path.is_file()
+                )
+
+        return result
+
+
