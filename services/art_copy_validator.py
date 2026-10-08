@@ -266,7 +266,25 @@ class ArtCopyValidator:
                 for source_file in source_files
             )
 
-            if has_new_files:
+            selected_destination_files = destination.files_by_id.get(
+                destination_id_path,
+                [],
+            )
+
+            destination_file_paths = {
+                build_destination_file(
+                    source_file,
+                    destination_id_path,
+                )
+                for source_file in source_files
+            }
+
+            has_remaining_files = any(
+                destination_file not in destination_file_paths
+                for destination_file in selected_destination_files
+            )
+
+            if has_new_files and has_remaining_files:
                 result.issues.append(
                     CopyValidationIssue(
                         issue_type=ValidationIssueType.ADD_FILES_WITHOUT_REPLACEMENT,
