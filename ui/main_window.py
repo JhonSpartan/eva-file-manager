@@ -73,7 +73,7 @@ from config.settings import DB_PATH, ensure_app_data
 
 class Ui_MainWindow:
     def setup_ui(self, MainWindow):
-        MainWindow.setWindowTitle("FileForge v1.0.0")
+        MainWindow.setWindowTitle("FileForge v1.1.0")
         MainWindow.resize(950, 700)
 
         # === Центральный виджет ===
