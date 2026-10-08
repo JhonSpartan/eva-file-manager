@@ -17,6 +17,7 @@ class ArtsTree(QTreeWidget):
     """Tree widget used for displaying EVA articles."""
     checkStateChanged = Signal()
     artsChanged = Signal()
+    pathsDropped = Signal(list)
 
     def __init__(
             self,
@@ -161,18 +162,42 @@ class ArtsTree(QTreeWidget):
         self.setDefaultDropAction(Qt.MoveAction)
 
     def dragEnterEvent(self, event):
-        if event.mimeData().hasFormat(ART_MIME_TYPE):
-            event.setDropAction(Qt.MoveAction)
+        if event.mimeData().hasFormat(
+                ART_MIME_TYPE
+        ):
+            event.setDropAction(
+                Qt.MoveAction
+            )
             event.accept()
-        else:
-            event.ignore()
+            return
+
+        if (
+                self.mode == ArtsTreeMode.AVAILABLE
+                and event.mimeData().hasUrls()
+        ):
+            event.acceptProposedAction()
+            return
+
+        event.ignore()
 
     def dragMoveEvent(self, event):
-        if event.mimeData().hasFormat(ART_MIME_TYPE):
-            event.setDropAction(Qt.MoveAction)
+        if event.mimeData().hasFormat(
+                ART_MIME_TYPE
+        ):
+            event.setDropAction(
+                Qt.MoveAction
+            )
             event.accept()
-        else:
-            event.ignore()
+            return
+
+        if (
+                self.mode == ArtsTreeMode.AVAILABLE
+                and event.mimeData().hasUrls()
+        ):
+            event.acceptProposedAction()
+            return
+
+        event.ignore()
 
 
     def _remove_art(self, path: Path):
@@ -238,6 +263,24 @@ class ArtsTree(QTreeWidget):
             self.checkStateChanged.emit()
 
     def dropEvent(self, event):
+        if (
+                self.mode == ArtsTreeMode.AVAILABLE
+                and event.mimeData().hasUrls()
+        ):
+            paths = [
+                Path(url.toLocalFile())
+                for url in event.mimeData().urls()
+                if url.isLocalFile()
+            ]
+
+            if not paths:
+                event.ignore()
+                return
+
+            self.pathsDropped.emit(paths)
+            event.acceptProposedAction()
+            return
+
         if not event.mimeData().hasFormat(ART_MIME_TYPE):
             event.ignore()
             return
