@@ -379,6 +379,9 @@ class MainWindow(QMainWindow):
         self.edit_page.moveToIdRequested.connect(
             self.on_move_to_id_requested
         )
+        self.copy_page.artsDropped.connect(
+            self.on_arts_dropped
+        )
 
         self.database_page.openFilesLastOutputRequested.connect(
             self.open_files_last_output
@@ -3830,3 +3833,36 @@ class MainWindow(QMainWindow):
         self.filter_files(
             self.edit_page.find_input.text()
         )
+
+    def on_arts_dropped(
+            self,
+            paths: list[Path],
+    ) -> None:
+
+        art_paths = self.art_service.collect_arts(
+            paths
+        )
+
+        arts_tree = self.copy_page.artsTree
+
+        existing_paths = {
+            arts_tree.topLevelItem(index).data(
+                0,
+                Qt.UserRole,
+            )
+            for index in range(
+                arts_tree.topLevelItemCount()
+            )
+        }
+
+        for art_path in art_paths:
+            if art_path in existing_paths:
+                continue
+
+            arts_tree.add_art(
+                art_path
+            )
+
+            existing_paths.add(
+                art_path
+            )

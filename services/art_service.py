@@ -42,5 +42,26 @@ class ArtService:
 
         return False
 
-    
+    def collect_arts(
+            self,
+            paths: list[Path],
+    ) -> list[Path]:
+
+        arts = []
+        seen = set()
+
+        for path in paths:
+            if not path.is_dir():
+                continue
+
+            for art_path in self.load_arts(
+                    str(path)
+            ):
+                if art_path in seen:
+                    continue
+
+                arts.append(art_path)
+                seen.add(art_path)
+
+        return arts
 
