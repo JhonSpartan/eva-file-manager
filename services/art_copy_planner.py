@@ -122,10 +122,7 @@ class ArtCopyPlanner:
             should_delete_destination_files = (
                     destination_state != SelectionState.NONE
                     and not is_redirected_5d
-                    and not (
-                    add_files_without_replacement
-                    and destination_state == SelectionState.FULL
-            )
+                    and not add_files_without_replacement
             )
 
             if should_delete_destination_files:

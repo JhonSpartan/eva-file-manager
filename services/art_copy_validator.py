@@ -249,7 +249,7 @@ class ArtCopyValidator:
                 return
 
         if (
-                destination_state == SelectionState.FULL
+                destination_state != SelectionState.NONE
                 and not is_redirected_5d
         ):
 
