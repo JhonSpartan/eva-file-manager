@@ -21,6 +21,8 @@ class CopyArtsPage(QWidget):
     copyAndRenameRequested = Signal()
 
     artsDropped = Signal(list)
+    srcArtsDropped = Signal(list)
+    dstArtsDropped = Signal(list)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -44,6 +46,8 @@ class CopyArtsPage(QWidget):
         self.dstArtsTree.checkStateChanged.connect(self.update_dst_id_checkboxes)
         self.dstArtsTree.artsChanged.connect(self.rebuild_dst_id_controls)
         self.artsTree.pathsDropped.connect(self.artsDropped.emit)
+        self.srcArtsTree.pathsDropped.connect(self.srcArtsDropped.emit)
+        self.dstArtsTree.pathsDropped.connect(self.dstArtsDropped.emit)
 
     def setup_ui(self):
         main_layout = QGridLayout(self)

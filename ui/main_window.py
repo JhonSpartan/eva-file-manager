@@ -382,6 +382,12 @@ class MainWindow(QMainWindow):
         self.copy_page.artsDropped.connect(
             self.on_arts_dropped
         )
+        self.copy_page.srcArtsDropped.connect(
+            self.on_src_arts_dropped
+        )
+        self.copy_page.dstArtsDropped.connect(
+            self.on_dst_arts_dropped
+        )
 
         self.database_page.openFilesLastOutputRequested.connect(
             self.open_files_last_output
@@ -3866,3 +3872,58 @@ class MainWindow(QMainWindow):
             existing_paths.add(
                 art_path
             )
+
+    def on_src_arts_dropped(
+            self,
+            paths: list[Path],
+    ) -> None:
+
+        src_tree = self.copy_page.srcArtsTree
+
+        # Источник должен быть пустым
+        if src_tree.topLevelItemCount() != 0:
+            return
+
+        art_paths = self.art_service.collect_arts(paths)
+
+        # Источник принимает строго один артикул
+        if len(art_paths) != 1:
+            return
+
+        src_tree.add_art(art_paths[0])
+
+        src_tree.artsChanged.emit()
+        src_tree.checkStateChanged.emit()
+
+    def on_dst_arts_dropped(
+            self,
+            paths: list[Path],
+    ) -> None:
+
+        art_paths = self.art_service.collect_arts(paths)
+
+        dst_tree = self.copy_page.dstArtsTree
+
+        existing_paths = {
+            dst_tree.topLevelItem(index).data(
+                0,
+                Qt.UserRole,
+            )
+            for index in range(
+                dst_tree.topLevelItemCount()
+            )
+        }
+
+        added = False
+
+        for art_path in art_paths:
+            if art_path in existing_paths:
+                continue
+
+            dst_tree.add_art(art_path)
+            existing_paths.add(art_path)
+            added = True
+
+        if added:
+            dst_tree.artsChanged.emit()
+            dst_tree.checkStateChanged.emit()

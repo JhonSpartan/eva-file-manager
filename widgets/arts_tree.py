@@ -171,10 +171,7 @@ class ArtsTree(QTreeWidget):
             event.accept()
             return
 
-        if (
-                self.mode == ArtsTreeMode.AVAILABLE
-                and event.mimeData().hasUrls()
-        ):
+        if event.mimeData().hasUrls():
             event.acceptProposedAction()
             return
 
@@ -190,10 +187,7 @@ class ArtsTree(QTreeWidget):
             event.accept()
             return
 
-        if (
-                self.mode == ArtsTreeMode.AVAILABLE
-                and event.mimeData().hasUrls()
-        ):
+        if event.mimeData().hasUrls():
             event.acceptProposedAction()
             return
 
@@ -263,10 +257,7 @@ class ArtsTree(QTreeWidget):
             self.checkStateChanged.emit()
 
     def dropEvent(self, event):
-        if (
-                self.mode == ArtsTreeMode.AVAILABLE
-                and event.mimeData().hasUrls()
-        ):
+        if event.mimeData().hasUrls():
             paths = [
                 Path(url.toLocalFile())
                 for url in event.mimeData().urls()
