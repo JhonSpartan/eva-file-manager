@@ -1763,6 +1763,11 @@ class MainWindow(QMainWindow):
                 f'Обновлено слоёв "nadpis": {result.renamed_layers}.'
             )
 
+        if result.normalized_units:
+            summary.append(
+                f"Нормализованы единицы измерения DXF: {result.normalized_units}."
+            )
+
         if result.errors:
             summary.append(
                 f"Ошибок: {len(result.errors)}."
