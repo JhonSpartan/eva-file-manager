@@ -3967,6 +3967,49 @@ class MainWindow(QMainWindow):
 
         visible_files, all_files = self._get_files_for_dxf_check()
 
+        for file_path in all_files:
+            stopper = self._get_file_stopper(file_path)
+
+            if stopper is None:
+                continue
+
+            try:
+                doc = ezdxf.readfile(file_path)
+                candidates = self.stopper_detector.find_candidates(
+                    doc.modelspace()
+                )
+
+                print(f"\nФайл: {file_path.name}")
+                print(f"Эталон: {stopper.diameter:g} мм")
+                print(f"Найдено кандидатов: {len(candidates)}")
+
+                for index, candidate in enumerate(candidates, start=1):
+                    validation = self.stopper_validator.validate(
+                        candidate,
+                        stopper.diameter,
+                    )
+
+                    width_mm = candidate.width * 10.0
+                    height_mm = candidate.height * 10.0
+
+                    min_diameter = 6.0 - self.stopper_validator.DIAMETER_TOLERANCE_MM
+                    max_diameter = 26.0 + self.stopper_validator.DIAMETER_TOLERANCE_MM
+
+                    in_range = (
+                            min_diameter <= width_mm <= max_diameter
+                            and min_diameter <= height_mm <= max_diameter
+                    )
+
+                    print(
+                        f"  Кандидат {index}: "
+                        f"{width_mm:.2f} × {height_mm:.2f} мм, "
+                        f"в диапазоне стоперов: {in_range}, "
+                        f"соответствует эталону: {validation.is_valid}"
+                    )
+
+            except (OSError, ezdxf.DXFStructureError) as error:
+                print(f"Ошибка чтения: {file_path} — {error}")
+
         geometry_result = self._check_all_art_geometry(all_files)
 
         print("Проблем геометрии:", geometry_result.problem_count)
@@ -4096,3 +4139,9 @@ class MainWindow(QMainWindow):
             result.issues.extend(art_result.issues)
 
         return result
+
+    def _get_file_stopper(self, file_path: Path):
+        stopper_name = file_path.stem.lower().rsplit("_", 1)[-1]
+
+        return self.stopper_repository.get_by_name(stopper_name)
+
