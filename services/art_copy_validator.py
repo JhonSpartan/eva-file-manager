@@ -168,7 +168,7 @@ class ArtCopyValidator:
             id_name: str,
             result: CopyValidationResult,
     ):
-        if destination.art_state != SelectionState.FULL:
+        if destination.art_state == SelectionState.NONE:
             return
 
         result.issues.append(

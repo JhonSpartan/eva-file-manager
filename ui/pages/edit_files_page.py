@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
     QWidget, QLabel, QPushButton, QLineEdit, QListWidget,
     QProgressBar, QVBoxLayout, QHBoxLayout, QGridLayout, QGroupBox
 )
-from PySide6.QtCore import Signal, QSize
+from PySide6.QtCore import Signal, QSize, Qt
 from utils.resource_path import resource_path
 
 from widgets.file_droplist import FileDropListWidget
@@ -28,6 +28,8 @@ class EditFilesPage(QWidget):
 
     copyProcessedRequested = Signal()
     filesDropped = Signal(list)
+
+    checkDxfRequested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -71,6 +73,10 @@ class EditFilesPage(QWidget):
         )
         self.return_processed_btn.clicked.connect(
             self.returnProcessedRequested.emit
+        )
+
+        self.check_dxf_btn.clicked.connect(
+            self.checkDxfRequested.emit
         )
 
         self.open_export_btn.clicked.connect(
@@ -239,6 +245,10 @@ class EditFilesPage(QWidget):
             36
         )
 
+        self.check_dxf_btn = QPushButton("Проверить DXF")
+        self.check_dxf_btn.setObjectName("checkDxfBtn")
+        self.check_dxf_btn.setMinimumHeight(36)
+
         bottom_buttons_layout = QHBoxLayout()
 
         bottom_buttons_layout.addWidget(
@@ -253,6 +263,12 @@ class EditFilesPage(QWidget):
 
         buttons_layout.addLayout(
             bottom_buttons_layout
+        )
+
+        buttons_layout.addSpacing(8)
+
+        buttons_layout.addWidget(
+            self.check_dxf_btn
         )
 
         buttons_layout.addStretch()

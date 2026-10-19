@@ -13,6 +13,7 @@ class RenameResult:
     renamed_layers: int = 0
     normalized_units: int = 0
     errors: list[str] = field(default_factory=list)
+    missing_main_files: list[Path] = field(default_factory=list)
 
 @dataclass
 class ReplaceResult:

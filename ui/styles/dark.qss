@@ -70,6 +70,31 @@ QPushButton:disabled {
     border-color: #30363d;
 }
 
+QPushButton#checkDxfBtn {
+    background-color: #244638;
+    color: #B9F2D0;
+    border: 1px solid #4A9973;
+    border-radius: 3px;
+
+    padding: 6px 12px;
+    min-height: 22px;
+    font-weight: 600;
+}
+
+QPushButton#checkDxfBtn:hover {
+    background-color: #305B47;
+}
+
+QPushButton#checkDxfBtn:pressed {
+    background-color: #1B362B;
+}
+
+QPushButton#checkDxfBtn:disabled {
+    background-color: #303A35;
+    color: #78877F;
+    border-color: #48554E;
+}
+
 /* ==============================
    SpinBox buttons
    ============================== */

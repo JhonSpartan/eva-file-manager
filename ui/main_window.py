@@ -1,3 +1,4 @@
+import ezdxf
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QPushButton, QLabel,
     QVBoxLayout, QHBoxLayout,
@@ -10,6 +11,7 @@ from pathlib import Path
 from database.repositories.path_repository import PathRepository
 from database.repositories.stopper_repository import StopperRepository
 from database.repositories.template_repository import TemplateRepository
+from models.dxf_check_result import DxfCheckResult
 from models.results import RenameFileResult
 from services.art_copy_planner import ArtCopyPlanner
 from services.art_copy_service import ArtCopyService
@@ -418,6 +420,9 @@ class MainWindow(QMainWindow):
         )
         self.edit_page.filesDropped.connect(
             self.on_files_dropped
+        )
+        self.edit_page.checkDxfRequested.connect(
+            self.on_check_dxf
         )
 
         self.database_page.templatesTable.addRequested.connect(
@@ -2751,6 +2756,10 @@ class MainWindow(QMainWindow):
 
         self.sync_files_to_rename_from_ui()
 
+        self.filter_files(
+            self.edit_page.find_input.text()
+        )
+
         self.edit_page.editFilesPbar.setValue(0)
 
     def on_export_source_requested(self) -> None:
@@ -3932,3 +3941,158 @@ class MainWindow(QMainWindow):
         if added:
             dst_tree.artsChanged.emit()
             dst_tree.checkStateChanged.emit()
+
+    def on_check_dxf(self):
+        filter_text = self.edit_page.find_input.text().strip()
+
+        if filter_text:
+            reply = QMessageBox.warning(
+                self,
+                "Активен фильтр файлов",
+                (
+                    f"Сейчас установлен фильтр: «{filter_text}».\n\n"
+                    "Проверка DXF будет выполнена только для "
+                    "видимых файлов рабочего списка.\n\n"
+                    "Проверка пустых ID-папок будет выполнена "
+                    "для всех определённых EVA независимо от фильтра.\n\n"
+                    "Продолжить?"
+                ),
+                QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+
+        visible_files, all_files = self._get_files_for_dxf_check()
+
+        geometry_result = self._check_all_art_geometry(all_files)
+
+        print("Проблем геометрии:", geometry_result.problem_count)
+
+        for issue in geometry_result.issues:
+            print(issue.category, issue.message)
+            for path in issue.paths:
+                print("  ", path)
+
+        eva_directories = self._get_eva_directories(all_files)
+        empty_id_directories = self._find_empty_id_directories(eva_directories)
+
+        missing_main = []
+        read_errors = []
+
+        for file in visible_files:
+            error = self.file_service.check_dxf_main(file)
+
+            if error:
+                if error.startswith("Не удалось прочитать DXF"):
+                    read_errors.append(error)
+                else:
+                    missing_main.append(error)
+
+        report = [
+            f"Проверено DXF: {len(visible_files)}",
+            f"Без слоя main: {len(missing_main)}",
+            f"Ошибок чтения: {len(read_errors)}",
+            f"Пустых ID-папок: {len(empty_id_directories)}",
+        ]
+
+        if missing_main:
+            report.extend(["", "DXF без main:", *missing_main])
+
+        if read_errors:
+            report.extend(["", "Ошибки чтения:", *read_errors])
+
+        if empty_id_directories:
+            report.extend([
+                "",
+                "Пустые ID-папки:",
+                *(str(path) for path in empty_id_directories),
+            ])
+
+        art_dir = Path("D:/basa/nieobrob/EVA7536/art-10262")
+
+        result = self.file_service.check_art_geometry(art_dir)
+
+        print("Найдено проблем:", result.problem_count)
+
+        for issue in result.issues:
+            print(issue.category, issue.message)
+            for path in issue.paths:
+                print("  ", path)
+
+        QMessageBox.information(
+            self,
+            "Тест финальной проверки DXF",
+            "\n".join(report),
+        )
+
+    def _get_files_for_dxf_check(self) -> tuple[list[Path], list[Path]]:
+        left_list = self.edit_page.files_to_rename_list
+
+        all_files = []
+        visible_files = []
+
+        for row in range(left_list.count()):
+            item = left_list.item(row)
+            path = Path(item.data(Qt.UserRole))
+
+            all_files.append(path)
+
+            if not left_list.isRowHidden(row):
+                visible_files.append(path)
+
+        return visible_files, all_files
+
+    def _get_eva_directories(self, files: list[Path]) -> list[Path]:
+        eva_directories = set()
+
+        for path in files:
+            eva_dir = path.parent.parent.parent
+
+            if eva_dir.name.upper().startswith("EVA"):
+                eva_directories.add(eva_dir)
+
+        return sorted(eva_directories)
+
+    def _find_empty_id_directories(
+            self,
+            eva_directories: list[Path],
+    ) -> list[Path]:
+        empty_id_directories = []
+
+        for eva_dir in eva_directories:
+            for art_dir in eva_dir.iterdir():
+                if not art_dir.is_dir():
+                    continue
+
+                for id_dir in art_dir.iterdir():
+                    if not id_dir.is_dir():
+                        continue
+
+                    if not id_dir.name.isdigit():
+                        continue
+
+                    if not any(id_dir.iterdir()):
+                        empty_id_directories.append(id_dir)
+
+        return sorted(empty_id_directories)
+
+    def _check_all_art_geometry(
+            self,
+            files: list[Path],
+    ) -> DxfCheckResult:
+        result = DxfCheckResult()
+
+        art_directories = sorted({
+            file.parent.parent
+            for file in files
+            if file.suffix.lower() == ".dxf"
+        })
+
+        for art_dir in art_directories:
+            art_result = self.file_service.check_art_geometry(art_dir)
+            result.issues.extend(art_result.issues)
+
+        return result

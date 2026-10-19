@@ -2,7 +2,13 @@ import pathlib
 from pathlib import Path
 import ezdxf
 from ezdxf.math import Matrix44
+from ezdxf import bbox
+from ezdxf.enums import TextEntityAlignment
 from models.results import RenameResult, RenameFileResult, ReplaceResult
+import hashlib
+import json
+from collections import Counter
+from models.dxf_check_result import DxfCheckIssue, DxfCheckResult
 
 
 class FileService:
@@ -116,6 +122,62 @@ class FileService:
 
         return self._file_result(file, new_file, renamed)
 
+    def add_centered_nadpis(self, doc, msp, file_art: str) -> bool:
+        main_entities = [
+            entity for entity in msp
+            if entity.dxf.layer.lower() == "main"
+        ]
+
+        if not main_entities:
+            return False
+
+        bounds = bbox.extents(main_entities)
+
+        if not bounds.has_data:
+            return False
+
+        center_x = (bounds.extmin.x + bounds.extmax.x) / 2
+        center_y = (bounds.extmin.y + bounds.extmax.y) / 2
+
+        if "MyTextStyle" not in doc.styles:
+            doc.styles.new(
+                name="MyTextStyle",
+                dxfattribs={
+                    "font": "arial.ttf",
+                    "width": 1.0,
+                },
+            )
+
+        doc.layers.new(name="nadpis")
+
+        text = msp.add_text(
+            file_art,
+            dxfattribs={
+                "layer": "nadpis",
+                "height": 2.0,
+                "color": 5,
+                "style": "MyTextStyle",
+            },
+        )
+
+        text.set_placement(
+            (center_x, center_y),
+            align=TextEntityAlignment.MIDDLE_CENTER,
+        )
+
+        return True
+
+    def check_dxf_main(self, file: Path) -> str | None:
+        try:
+            doc = ezdxf.readfile(file)
+        except (OSError, ezdxf.DXFStructureError) as e:
+            return f"Не удалось прочитать DXF: {file} ({e})"
+
+        if "main" not in doc.layers:
+            return f"Отсутствует обязательный слой main: {file}"
+
+        return None
+
     def rename_inner(
             self,
             new_file_path: Path,
@@ -124,40 +186,65 @@ class FileService:
             file_id: str,
             result: RenameResult,
     ) -> int:
-        layer_changes = 0
-
         try:
             doc = ezdxf.readfile(new_file_path)
             msp = doc.modelspace()
             layers = doc.layers
 
-        except (
-                IOError,
-                ezdxf.DXFStructureError,
-        ):
+        except (IOError, ezdxf.DXFStructureError):
             return 0
 
-        layer_name = "nadpis"
-        layer_to_remove = "Defpoints"
-
-        if layer_name not in layers:
+        # Без main DXF не изменяем и не сохраняем.
+        if "main" not in layers:
             return 0
 
-        if self.normalize_insunits(doc):
-            result.normalized_units += 1
+        layer_changes = 0
 
-        existing_texts = [e for e in msp.query('TEXT') if e.dxf.layer == layer_name]
+        units_normalized = self.normalize_insunits(doc)
 
-        if existing_texts:
-            layer_change_res = self.update_existing_text(existing_texts, msp, file_art, layer_name)
+        if "nadpis" not in layers:
+            if self.add_centered_nadpis(doc, msp, file_art):
+                layer_changes += 1
+
         else:
-            layer_change_res = self.add_new_text(doc, msp, file_art, file_id, filename, layer_name)
-        layer_changes += layer_change_res
+            existing_texts = [
+                entity for entity in msp.query("TEXT")
+                if entity.dxf.layer == "nadpis"
+            ]
 
-        self.remove_defpoints_layer(doc, layer_to_remove)
-        self.save_file(doc)
+            if existing_texts:
+                layer_changes += self.update_existing_text(
+                    existing_texts,
+                    msp,
+                    file_art,
+                    "nadpis",
+                )
+            else:
+                layer_changes += self.add_new_text(
+                    doc,
+                    msp,
+                    file_art,
+                    file_id,
+                    filename,
+                    "nadpis",
+                )
 
-        return layer_changes
+        # Удаление Defpoints тоже считается изменением.
+        defpoints_exists = "Defpoints" in layers
+
+        if defpoints_exists:
+            self.remove_defpoints_layer(doc, "Defpoints")
+
+        if units_normalized or layer_changes or defpoints_exists:
+            self.save_file(doc)
+
+            if units_normalized:
+                result.normalized_units += 1
+
+            if layer_changes:
+                result.renamed_layers += layer_changes
+
+        return 0
 
     def update_existing_text(self, existing_texts, msp, file_art, layer_name):
         layer_changes = 0
@@ -310,5 +397,263 @@ class FileService:
                 )
 
         return result
+
+    def _get_main_geometry_hash(self, file: Path) -> str | None:
+        doc = ezdxf.readfile(file)
+        msp = doc.modelspace()
+
+        splines = []
+
+        def normalize(values):
+            return [round(float(value), 5) for value in values]
+
+        main_splines = [
+            entity
+            for entity in msp.query("SPLINE")
+            if entity.dxf.layer.lower() == "main"
+        ]
+
+        if not main_splines:
+            return None
+
+        # Общая точка отсчёта для всех SPLINE файла.
+        all_points = [
+            point
+            for entity in main_splines
+            for point in entity.control_points
+        ]
+
+        if not all_points:
+            return None
+
+        origin = (
+            min(point[0] for point in all_points),
+            min(point[1] for point in all_points),
+            min(point[2] for point in all_points),
+        )
+
+        for entity in main_splines:
+            relative_points = [
+                [
+                    round(float(value - start), 5)
+                    for value, start in zip(point, origin)
+                ]
+                for point in entity.control_points
+            ]
+
+            spline_data = {
+                "degree": entity.dxf.degree,
+                "flags": entity.dxf.flags,
+                "control_points": relative_points,
+                "knots": normalize(entity.knots),
+                "weights": normalize(entity.weights),
+            }
+
+            splines.append(spline_data)
+
+        splines.sort(
+            key=lambda spline: json.dumps(
+                spline,
+                sort_keys=True,
+            )
+        )
+
+        data = json.dumps(
+            splines,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+
+        return hashlib.sha256(data.encode("utf-8")).hexdigest()
+
+    def _find_matching_geometry(
+            self,
+            files_1: list[Path],
+            files_2: list[Path],
+    ) -> list[tuple[Path, Path]]:
+        hashes_2 = {}
+
+        for file in files_2:
+            geometry_hash = self._get_main_geometry_hash(file)
+            if geometry_hash is not None:
+                hashes_2.setdefault(geometry_hash, []).append(file)
+
+        matches = []
+
+        for file in files_1:
+            geometry_hash = self._get_main_geometry_hash(file)
+
+            if geometry_hash is None:
+                continue
+
+            for matching_file in hashes_2.get(geometry_hash, []):
+                matches.append((file, matching_file))
+
+        return matches
+
+    def _find_unmatched_geometry(
+            self,
+            files_1: list[Path],
+            files_2: list[Path],
+    ) -> tuple[list[Path], list[Path]]:
+        hashes_1 = {}
+        hashes_2 = {}
+
+        for file in files_1:
+            geometry_hash = self._get_main_geometry_hash(file)
+            if geometry_hash is not None:
+                hashes_1.setdefault(geometry_hash, []).append(file)
+
+        for file in files_2:
+            geometry_hash = self._get_main_geometry_hash(file)
+            if geometry_hash is not None:
+                hashes_2.setdefault(geometry_hash, []).append(file)
+
+        unmatched_1 = []
+        unmatched_2 = []
+
+        for geometry_hash in hashes_1.keys() | hashes_2.keys():
+            group_1 = hashes_1.get(geometry_hash, [])
+            group_2 = hashes_2.get(geometry_hash, [])
+
+            common_count = min(len(group_1), len(group_2))
+
+            unmatched_1.extend(group_1[common_count:])
+            unmatched_2.extend(group_2[common_count:])
+
+        return sorted(unmatched_1), sorted(unmatched_2)
+
+    def _find_unmatched_passengers(
+            self,
+            passengers_1: list[Path],
+            passengers_2: list[Path],
+    ) -> tuple[list[Path], list[Path]]:
+
+        def variant(file: Path) -> str:
+            return file.stem.lower().split("_passenger", 1)[1]
+
+        groups_1 = {variant(file): file for file in passengers_1}
+        groups_2 = {variant(file): file for file in passengers_2}
+
+        unmatched_1 = []
+        unmatched_2 = []
+
+        for suffix in sorted(groups_1.keys() | groups_2.keys()):
+            file_1 = groups_1.get(suffix)
+            file_2 = groups_2.get(suffix)
+
+            if file_1 is None:
+                unmatched_2.append(file_2)
+            elif file_2 is None:
+                unmatched_1.append(file_1)
+            else:
+                hash_1 = self._get_main_geometry_hash(file_1)
+                hash_2 = self._get_main_geometry_hash(file_2)
+
+                if hash_1 is not None and hash_2 is not None:
+                    if hash_1 != hash_2:
+                        unmatched_1.append(file_1)
+                        unmatched_2.append(file_2)
+
+        return unmatched_1, unmatched_2
+
+    def get_art_passengers(
+            self, art_dir: Path,
+    ) -> tuple[list[Path], list[Path]]:
+        def collect(id_number: int) -> list[Path]:
+            id_dir = art_dir / str(id_number)
+
+            if not id_dir.is_dir():
+                return []
+
+            return sorted(
+                file
+                for file in id_dir.iterdir()
+                if file.is_file()
+                and file.suffix.lower() == ".dxf"
+                and "passenger" in file.stem.lower().split("_")
+            )
+
+        return collect(1), collect(2)
+
+    def get_art_drivers(
+            self, art_dir: Path,
+    ) -> tuple[list[Path], list[Path]]:
+        def collect(id_number: int) -> list[Path]:
+            id_dir = art_dir / str(id_number)
+
+            if not id_dir.is_dir():
+                return []
+
+            return sorted(
+                file
+                for file in id_dir.iterdir()
+                if file.is_file()
+                and file.suffix.lower() == ".dxf"
+                and "driver" in file.stem.lower().split("_")
+            )
+
+        return collect(1), collect(2)
+
+    def check_art_geometry(self, art_dir: Path) -> DxfCheckResult:
+        result = DxfCheckResult()
+
+        passengers_1, passengers_2 = self.get_art_passengers(art_dir)
+        drivers_1, drivers_2 = self.get_art_drivers(art_dir)
+
+        # 1. Passenger ID1 ↔ ID2
+        # 1. Passenger ID1 ↔ ID2
+        if (art_dir / "1").is_dir():
+            unmatched_1, unmatched_2 = self._find_unmatched_passengers(
+                passengers_1, passengers_2
+            )
+
+            if unmatched_1 or unmatched_2:
+                result.issues.append(
+                    DxfCheckIssue(
+                        category="passenger_mismatch",
+                        message=(
+                            f"Несоответствие геометрии Passenger "
+                            f"между ID1 и ID2: {art_dir}"
+                        ),
+                        paths=unmatched_1 + unmatched_2,
+                    )
+                )
+
+        # 2. Driver ID1 ↔ ID2
+        driver_matches = self._find_matching_geometry(
+            drivers_1, drivers_2
+        )
+
+        for file_1, file_2 in driver_matches:
+            result.issues.append(
+                DxfCheckIssue(
+                    category="driver_duplicate",
+                    message=f"Совпадает геометрия Driver ID1 и ID2: {art_dir}",
+                    paths=[file_1, file_2],
+                )
+            )
+
+        # 3. Driver ↔ Passenger внутри ART
+        all_drivers = drivers_1 + drivers_2
+        all_passengers = passengers_1 + passengers_2
+
+        cross_matches = self._find_matching_geometry(
+            all_drivers, all_passengers
+        )
+
+        for driver, passenger in cross_matches:
+            result.issues.append(
+                DxfCheckIssue(
+                    category="driver_passenger_match",
+                    message=f"Совпадает геометрия Driver и Passenger: {art_dir}",
+                    paths=[driver, passenger],
+                )
+            )
+
+        return result
+
+
+
 
 
