@@ -3967,48 +3967,37 @@ class MainWindow(QMainWindow):
 
         visible_files, all_files = self._get_files_for_dxf_check()
 
-        for file_path in all_files:
+        standard_diameters = [
+            item.diameter
+            for item in self.stopper_repository.get_all()
+        ]
+
+        stopper_result = DxfCheckResult()
+
+        for file_path in visible_files:
             stopper = self._get_file_stopper(file_path)
 
             if stopper is None:
                 continue
 
-            try:
-                doc = ezdxf.readfile(file_path)
-                candidates = self.stopper_detector.find_candidates(
-                    doc.modelspace()
-                )
+            file_result = self.file_service.check_file_stoppers(
+                file_path=file_path,
+                expected_diameter=stopper.diameter,
+                standard_diameters=standard_diameters,
+            )
 
-                print(f"\nФайл: {file_path.name}")
-                print(f"Эталон: {stopper.diameter:g} мм")
-                print(f"Найдено кандидатов: {len(candidates)}")
+            stopper_result.checked_files += file_result.checked_files
+            stopper_result.issues.extend(file_result.issues)
 
-                for index, candidate in enumerate(candidates, start=1):
-                    validation = self.stopper_validator.validate(
-                        candidate,
-                        stopper.diameter,
-                    )
+        print("\n=== ПРОВЕРКА СТОПЕРОВ ===")
+        print(f"Проверено файлов: {stopper_result.checked_files}")
+        print(f"Проблем: {stopper_result.problem_count}")
 
-                    width_mm = candidate.width * 10.0
-                    height_mm = candidate.height * 10.0
+        for issue in stopper_result.issues:
+            print(f"\n{issue.message}")
 
-                    min_diameter = 6.0 - self.stopper_validator.DIAMETER_TOLERANCE_MM
-                    max_diameter = 26.0 + self.stopper_validator.DIAMETER_TOLERANCE_MM
-
-                    in_range = (
-                            min_diameter <= width_mm <= max_diameter
-                            and min_diameter <= height_mm <= max_diameter
-                    )
-
-                    print(
-                        f"  Кандидат {index}: "
-                        f"{width_mm:.2f} × {height_mm:.2f} мм, "
-                        f"в диапазоне стоперов: {in_range}, "
-                        f"соответствует эталону: {validation.is_valid}"
-                    )
-
-            except (OSError, ezdxf.DXFStructureError) as error:
-                print(f"Ошибка чтения: {file_path} — {error}")
+            for path in issue.paths:
+                print(f"  {path}")
 
         geometry_result = self._check_all_art_geometry(all_files)
 

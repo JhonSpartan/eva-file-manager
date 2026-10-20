@@ -9,6 +9,8 @@ import hashlib
 import json
 from collections import Counter
 from models.dxf_check_result import DxfCheckIssue, DxfCheckResult
+from services.stopper_detector import StopperDetector
+from services.stopper_validator import StopperValidator
 
 
 class FileService:
@@ -648,6 +650,97 @@ class FileService:
                     category="driver_passenger_match",
                     message=f"Совпадает геометрия Driver и Passenger: {art_dir}",
                     paths=[driver, passenger],
+                )
+            )
+
+        return result
+
+    def check_file_stoppers(
+            self,
+            file_path: Path,
+            expected_diameter: float,
+            standard_diameters: list[float],
+    ) -> DxfCheckResult:
+
+        result = DxfCheckResult(checked_files=1)
+
+        try:
+            doc = ezdxf.readfile(file_path)
+        except (OSError, ezdxf.DXFStructureError) as error:
+            result.issues.append(
+                DxfCheckIssue(
+                    category="stopper_read_error",
+                    message=f"Не удалось прочитать DXF: {error}",
+                    paths=[file_path],
+                )
+            )
+            return result
+
+        detector = StopperDetector()
+        validator = StopperValidator()
+
+        candidates = detector.find_candidates(doc.modelspace())
+
+        min_size = min(standard_diameters) - validator.DIAMETER_TOLERANCE_MM
+        max_size = max(standard_diameters) + validator.DIAMETER_TOLERANCE_MM
+
+        stopper_candidates = [
+            candidate
+            for candidate in candidates
+            if (
+                    min_size <= candidate.width * validator.DXF_TO_MM <= max_size
+                    and min_size <= candidate.height * validator.DXF_TO_MM <= max_size
+            )
+        ]
+
+        if not stopper_candidates:
+            result.issues.append(
+                DxfCheckIssue(
+                    category="stopper_missing",
+                    message=(
+                        f"Стоперы не обнаружены. "
+                        f"Ожидаемый диаметр: {expected_diameter:g} мм. "
+                        f"Проверьте наличие стоперов и название файла."
+                    ),
+                    paths=[file_path],
+                )
+            )
+            return result
+
+        for candidate in stopper_candidates:
+            validation = validator.validate(candidate, expected_diameter)
+
+            if validation.is_valid:
+                continue
+
+            width_mm = candidate.width * validator.DXF_TO_MM
+            height_mm = candidate.height * validator.DXF_TO_MM
+
+            message = (
+                f"Несоответствие диаметра стопера: "
+                f"ожидалось {expected_diameter:g} мм, "
+                f"обнаружено {width_mm:.2f} × {height_mm:.2f} мм."
+            )
+
+            for diameter in standard_diameters:
+                if diameter == expected_diameter:
+                    continue
+
+                if (
+                        abs(width_mm - diameter) <= validator.DIAMETER_TOLERANCE_MM
+                        and abs(height_mm - diameter) <= validator.DIAMETER_TOLERANCE_MM
+                ):
+                    message += (
+                        f" Совпадает с другим стандартным "
+                        f"номиналом: {diameter:g} мм."
+                    )
+                    break
+
+            result.issues.append(
+                DxfCheckIssue(
+                    category="stopper_diameter_mismatch",
+                    message=message,
+                    paths=[file_path],
                 )
             )
 
