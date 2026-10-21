@@ -559,6 +559,25 @@ class FileService:
 
         return unmatched_1, unmatched_2
 
+    def _find_duplicate_geometry(
+            self, files: list[Path],
+    ) -> list[tuple[Path, Path]]:
+        duplicates = []
+        hashes = {}
+
+        for file in files:
+            geometry_hash = self._get_main_geometry_hash(file)
+
+            if geometry_hash is None:
+                continue
+
+            if geometry_hash in hashes:
+                duplicates.append((hashes[geometry_hash], file))
+            else:
+                hashes[geometry_hash] = file
+
+        return duplicates
+
     def get_art_passengers(
             self, art_dir: Path,
     ) -> tuple[list[Path], list[Path]]:
@@ -574,6 +593,7 @@ class FileService:
                 if file.is_file()
                 and file.suffix.lower() == ".dxf"
                 and "passenger" in file.stem.lower().split("_")
+                and "driver_with_passenger" not in file.stem.lower()
             )
 
         return collect(1), collect(2)
@@ -593,6 +613,27 @@ class FileService:
                 if file.is_file()
                 and file.suffix.lower() == ".dxf"
                 and "driver" in file.stem.lower().split("_")
+                and "driver_with_passenger" not in file.stem.lower()
+            )
+
+        return collect(1), collect(2)
+
+    def get_art_combined(
+            self, art_dir: Path,
+    ) -> tuple[list[Path], list[Path]]:
+
+        def collect(id_number: int) -> list[Path]:
+            id_dir = art_dir / str(id_number)
+
+            if not id_dir.is_dir():
+                return []
+
+            return sorted(
+                file
+                for file in id_dir.iterdir()
+                if file.is_file()
+                and file.suffix.lower() == ".dxf"
+                and "driver_with_passenger" in file.stem.lower()
             )
 
         return collect(1), collect(2)
@@ -602,6 +643,36 @@ class FileService:
 
         passengers_1, passengers_2 = self.get_art_passengers(art_dir)
         drivers_1, drivers_2 = self.get_art_drivers(art_dir)
+        combined_1, combined_2 = self.get_art_combined(art_dir)
+
+        for label, files in [
+            ("Driver ID1", drivers_1),
+            ("Driver ID2", drivers_2),
+            ("Passenger ID1", passengers_1),
+            ("Passenger ID2", passengers_2),
+            ("Combined ID1", combined_1),
+            ("Combined ID2", combined_2),
+        ]:
+            duplicates = self._find_duplicate_geometry(files)
+
+        for label, files in [
+            ("Driver ID1", drivers_1),
+            ("Driver ID2", drivers_2),
+            ("Passenger ID1", passengers_1),
+            ("Passenger ID2", passengers_2),
+            ("Combined ID1", combined_1),
+            ("Combined ID2", combined_2),
+        ]:
+            duplicates = self._find_duplicate_geometry(files)
+
+            for file_1, file_2 in duplicates:
+                result.issues.append(
+                    DxfCheckIssue(
+                        category="geometry_duplicate_within_id",
+                        message=f"Совпадает геометрия внутри {label}: {art_dir}",
+                        paths=[file_1, file_2],
+                    )
+                )
 
         # 1. Passenger ID1 ↔ ID2
         # 1. Passenger ID1 ↔ ID2
