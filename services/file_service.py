@@ -655,16 +655,6 @@ class FileService:
         ]:
             duplicates = self._find_duplicate_geometry(files)
 
-        for label, files in [
-            ("Driver ID1", drivers_1),
-            ("Driver ID2", drivers_2),
-            ("Passenger ID1", passengers_1),
-            ("Passenger ID2", passengers_2),
-            ("Combined ID1", combined_1),
-            ("Combined ID2", combined_2),
-        ]:
-            duplicates = self._find_duplicate_geometry(files)
-
             for file_1, file_2 in duplicates:
                 result.issues.append(
                     DxfCheckIssue(
@@ -673,6 +663,20 @@ class FileService:
                         paths=[file_1, file_2],
                     )
                 )
+
+        # Совпадения Combined между ID1 и ID2
+        combined_matches = self._find_matching_geometry(
+            combined_1, combined_2
+        )
+
+        for file_1, file_2 in combined_matches:
+            result.issues.append(
+                DxfCheckIssue(
+                    category="combined_duplicate_between_ids",
+                    message=f"Совпадает геометрия Combined ID1 и ID2: {art_dir}",
+                    paths=[file_1, file_2],
+                )
+            )
 
         # 1. Passenger ID1 ↔ ID2
         # 1. Passenger ID1 ↔ ID2
