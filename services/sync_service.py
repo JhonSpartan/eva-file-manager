@@ -321,15 +321,17 @@ class SyncService:
                         INSERT INTO stopper_catalog (
                             stopper_name,
                             diameter,
+                            is_cuttable,
                             uuid,
                             updated_at,
                             deleted_at
                         )
-                        VALUES (?, ?, ?, ?, ?)
+                        VALUES (?, ?, ?, ?, ?, ?)
                         """,
                         (
                             stopper["stopper_name"],
                             stopper["diameter"],
+                            int(stopper["is_cuttable"]),
                             cloud_uuid,
                             stopper["updated_at"].isoformat(),
                             None,
@@ -342,6 +344,7 @@ class SyncService:
                         UPDATE stopper_catalog
                         SET stopper_name = ?,
                             diameter = ?,
+                            is_cuttable = ?,
                             uuid = ?,
                             updated_at = ?,
                             deleted_at = ?
@@ -350,6 +353,7 @@ class SyncService:
                         (
                             stopper["stopper_name"],
                             stopper["diameter"],
+                            int(stopper["is_cuttable"]),
                             cloud_uuid,
                             stopper["updated_at"].isoformat(),
                             None,

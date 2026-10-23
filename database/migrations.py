@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 class DatabaseMigrator:
 
-    CURRENT_VERSION = 2
+    CURRENT_VERSION = 3
 
     def migrate(
             self,
@@ -43,6 +43,16 @@ class DatabaseMigrator:
             self.set_version(
                 connection,
                 2,
+            )
+
+        if current_version < 3:
+            self.migrate_to_v3(
+                connection
+            )
+
+            self.set_version(
+                connection,
+                3,
             )
 
     def ensure_schema_version_table(
@@ -170,6 +180,16 @@ class DatabaseMigrator:
                 connection,
                 table_name,
             )
+
+    def migrate_to_v3(
+            self,
+            connection: sqlite3.Connection,
+    ) -> None:
+
+        connection.execute("""
+            ALTER TABLE stopper_catalog
+            ADD COLUMN is_cuttable INTEGER NOT NULL DEFAULT 1
+        """)
 
     def add_sync_columns(
             self,

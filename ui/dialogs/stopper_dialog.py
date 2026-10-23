@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QHBoxLayout,
-    QMessageBox,
+    QMessageBox, QCheckBox,
 )
 
 from ui.dialogs.base_dialog import BaseDialog
@@ -18,6 +18,7 @@ class StopperDialog(BaseDialog):
             diameter: float | None = None,
             stopper_name: str = "",
             parent=None,
+            is_cuttable: bool = True,
     ):
         super().__init__(parent)
 
@@ -28,6 +29,8 @@ class StopperDialog(BaseDialog):
         )
 
         self.setup_ui()
+
+        self.is_cuttable_checkbox.setChecked(is_cuttable)
 
         if diameter is not None:
             self.diameter_input.setText(
@@ -45,6 +48,8 @@ class StopperDialog(BaseDialog):
 
         self.diameter_input = QLineEdit()
         self.stopper_name_input = QLineEdit()
+        self.is_cuttable_checkbox = QCheckBox()
+        self.is_cuttable_checkbox.setChecked(True)
 
         form_layout.addRow(
             "Диаметр стопера:",
@@ -54,6 +59,11 @@ class StopperDialog(BaseDialog):
         form_layout.addRow(
             "Название стопера:",
             self.stopper_name_input,
+        )
+
+        form_layout.addRow(
+            "Участвует в крое:",
+            self.is_cuttable_checkbox,
         )
 
         layout.addLayout(form_layout)
@@ -129,7 +139,7 @@ class StopperDialog(BaseDialog):
 
         self.accept()
 
-    def get_data(self) -> tuple[float, str]:
+    def get_data(self) -> tuple[float, str, bool]:
         return (
             float(
                 self.diameter_input
@@ -137,4 +147,5 @@ class StopperDialog(BaseDialog):
                 .replace(",", ".")
             ),
             self.stopper_name_input.text().strip(),
+            self.is_cuttable_checkbox.isChecked(),
         )

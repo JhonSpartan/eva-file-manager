@@ -62,9 +62,10 @@ class DatabasePage(QWidget):
             [
                 "Диаметр",
                 "Стопер",
-            ],
+                "Участвует в крое"
+             ],
             stretch_column=2,
-            center_columns={1}
+            center_columns={1, 3}
         )
 
         self.copyRulesTable = DatabaseTableWidget(

@@ -1,6 +1,6 @@
 class CloudDatabaseMigrator:
 
-    CURRENT_VERSION = 1
+    CURRENT_VERSION = 2
 
     def migrate(
             self,
@@ -22,6 +22,16 @@ class CloudDatabaseMigrator:
             self.set_version(
                 connection,
                 1,
+            )
+
+        if current_version < 2:
+            self.migrate_to_v2(
+                connection
+            )
+
+            self.set_version(
+                connection,
+                2,
             )
 
     def ensure_schema_version_table(
@@ -125,4 +135,15 @@ class CloudDatabaseMigrator:
                     updated_at TIMESTAMPTZ NOT NULL,
                     deleted_at TIMESTAMPTZ
                 )
+            """)
+
+    def migrate_to_v2(
+            self,
+            connection,
+    ) -> None:
+
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                ALTER TABLE stopper_catalog
+                ADD COLUMN is_cuttable BOOLEAN NOT NULL DEFAULT TRUE
             """)

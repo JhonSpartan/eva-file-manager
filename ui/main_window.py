@@ -2050,6 +2050,7 @@ class MainWindow(QMainWindow):
                     "values": {
                         "diameter": record.diameter,
                         "stopper_name": record.stopper_name,
+                        "is_cuttable": "Да" if record.is_cuttable else "Нет",
                     },
                 }
             )
@@ -2069,11 +2070,12 @@ class MainWindow(QMainWindow):
         if dialog.exec() != QDialog.Accepted:
             return
 
-        diameter, stopper_name = dialog.get_data()
+        diameter, stopper_name, is_cuttable = dialog.get_data()
 
         self.cloud_sync_repository.add_stopper(
             diameter=diameter,
             stopper_name=stopper_name,
+            is_cuttable=is_cuttable,
         )
 
         self.sync_service.sync()
@@ -2101,18 +2103,20 @@ class MainWindow(QMainWindow):
         dialog = StopperDialog(
             diameter=record.diameter,
             stopper_name=record.stopper_name,
+            is_cuttable=record.is_cuttable,
             parent=self,
         )
 
         if dialog.exec() != QDialog.Accepted:
             return
 
-        diameter, stopper_name = dialog.get_data()
+        diameter, stopper_name, is_cuttable = dialog.get_data()
 
         self.cloud_sync_repository.update_stopper(
             stopper_uuid=stopper_uuid,
             stopper_name=stopper_name,
             diameter=diameter,
+            is_cuttable=is_cuttable,
         )
 
         self.sync_service.sync()
@@ -3944,6 +3948,9 @@ class MainWindow(QMainWindow):
 
     def on_check_dxf(self):
         filter_text = self.edit_page.find_input.text().strip()
+
+        for stopper in self.stopper_repository.get_all():
+            print(stopper.stopper_name, stopper.is_cuttable)
 
         if filter_text:
             reply = QMessageBox.warning(

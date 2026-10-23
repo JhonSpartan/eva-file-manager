@@ -14,7 +14,7 @@ class StopperRepository:
         with self.database.connect() as connection:
             rows = connection.execute(
                 """
-                SELECT id, diameter, stopper_name
+                SELECT id, diameter, stopper_name, is_cuttable
                 FROM stopper_catalog
                 WHERE deleted_at IS NULL
                 ORDER BY diameter, stopper_name
@@ -26,6 +26,7 @@ class StopperRepository:
                 id=row["id"],
                 diameter=row["diameter"],
                 stopper_name=row["stopper_name"],
+                is_cuttable=bool(row["is_cuttable"]),
             )
             for row in rows
         ]
@@ -37,7 +38,7 @@ class StopperRepository:
         with self.database.connect() as connection:
             row = connection.execute(
                 """
-                SELECT id, diameter, stopper_name
+                SELECT id, diameter, stopper_name, is_cuttable
                 FROM stopper_catalog
                 WHERE id = ?
                   AND deleted_at IS NULL
@@ -52,6 +53,7 @@ class StopperRepository:
             id=row["id"],
             diameter=row["diameter"],
             stopper_name=row["stopper_name"],
+            is_cuttable=bool(row["is_cuttable"]),
         )
 
     def get_uuid_by_id(
@@ -83,7 +85,7 @@ class StopperRepository:
         with self.database.connect() as connection:
             row = connection.execute(
                 """
-                SELECT id, diameter, stopper_name
+                SELECT id, diameter, stopper_name, is_cuttable
                 FROM stopper_catalog
                 WHERE stopper_name = ?
                   AND deleted_at IS NULL
@@ -100,4 +102,5 @@ class StopperRepository:
             id=row["id"],
             diameter=row["diameter"],
             stopper_name=row["stopper_name"],
+            is_cuttable=bool(row["is_cuttable"]),
         )

@@ -74,6 +74,7 @@ class CloudSyncRepository:
                     SELECT
                         stopper_name,
                         diameter,
+                        is_cuttable,
                         uuid,
                         updated_at,
                         deleted_at
@@ -174,6 +175,7 @@ class CloudSyncRepository:
             self,
             stopper_name: str,
             diameter: float,
+            is_cuttable: bool = True,
     ) -> None:
         with self.database.connect() as connection:
             connection.execute(
@@ -181,11 +183,13 @@ class CloudSyncRepository:
                 INSERT INTO stopper_catalog (
                     stopper_name,
                     diameter,
+                    is_cuttable,
                     uuid,
                     updated_at,
                     deleted_at
                 )
                 VALUES (
+                    %s,
                     %s,
                     %s,
                     gen_random_uuid(),
@@ -196,6 +200,7 @@ class CloudSyncRepository:
                 (
                     stopper_name,
                     diameter,
+                    is_cuttable,
                 ),
             )
 
@@ -204,6 +209,7 @@ class CloudSyncRepository:
             stopper_uuid: str,
             stopper_name: str,
             diameter: float,
+            is_cuttable: bool = True,
     ) -> None:
         with self.database.connect() as connection:
             connection.execute(
@@ -212,6 +218,7 @@ class CloudSyncRepository:
                 SET
                     stopper_name = %s,
                     diameter = %s,
+                    is_cuttable = %s,
                     updated_at = NOW()
                 WHERE uuid = %s
                   AND deleted_at IS NULL
@@ -219,6 +226,7 @@ class CloudSyncRepository:
                 (
                     stopper_name,
                     diameter,
+                    is_cuttable,
                     stopper_uuid,
                 ),
             )

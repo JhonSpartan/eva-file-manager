@@ -13,3 +13,4 @@ class StopperRecord:
     id: int
     diameter: int
     stopper_name: str
+    is_cuttable: bool = True
