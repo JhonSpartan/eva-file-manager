@@ -738,9 +738,20 @@ class MainWindow(QMainWindow):
 
     def set_processing_state(self, processing: bool):
         self.edit_page.load_files_btn.setEnabled(not processing)
+        self.edit_page.add_files_btn.setEnabled(not processing)
         self.edit_page.rename_files_btn.setEnabled(not processing)
+        self.edit_page.delete_source_btn.setEnabled(not processing)
+        self.edit_page.move_to_id_btn.setEnabled(not processing)
+        self.edit_page.copy_source_btn.setEnabled(not processing)
+        self.edit_page.copy_processed_btn.setEnabled(not processing)
+        self.edit_page.clear_processed_btn.setEnabled(not processing)
+        self.edit_page.return_processed_btn.setEnabled(not processing)
+        self.edit_page.open_export_btn.setEnabled(not processing)
+        self.edit_page.check_dxf_btn.setEnabled(not processing)
         self.edit_page.replace_btn.setEnabled(not processing)
         self.edit_page.remove_files_btn.setEnabled(not processing)
+        self.edit_page.stoppers_btn.setEnabled(not processing)
+        self.edit_page.find_input.setEnabled(not processing)
 
     def set_copy_processing_state(self, processing: bool):
 
@@ -754,6 +765,10 @@ class MainWindow(QMainWindow):
 
     def start_rename(self, for_dxf_check: bool = False):
         self.rename_for_dxf_check = for_dxf_check
+
+        if not for_dxf_check:
+            visible_files, _ = self._get_files_for_dxf_check()
+            self.files_to_rename = visible_files.copy()
 
         self.set_processing_state(True)
         self.thread = QThread()

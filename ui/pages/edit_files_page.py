@@ -249,6 +249,18 @@ class EditFilesPage(QWidget):
         self.check_dxf_btn.setObjectName("checkDxfBtn")
         self.check_dxf_btn.setMinimumHeight(36)
 
+        self.check_dxf_btn.setIcon(
+            QIcon(
+                str(
+                    resource_path(
+                        "icons",
+                        "shield-check.svg",
+                    )
+                )
+            )
+        )
+        self.check_dxf_btn.setIconSize(QSize(24, 24))
+
         bottom_buttons_layout = QHBoxLayout()
 
         bottom_buttons_layout.addWidget(
