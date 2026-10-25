@@ -573,7 +573,9 @@ class MainWindow(QMainWindow):
             return
 
         self.edit_page.files_to_rename_list.clear()
+        self.edit_page.renamed_files_list.clear()
         self.edit_page.editFilesPbar.setValue(0)
+        self.edit_page.editFilesPbar.setFormat("%p%")
         # рендерим
         self.render_files(file_paths)
         self.filter_files(
@@ -2814,6 +2816,7 @@ class MainWindow(QMainWindow):
         )
 
         self.edit_page.editFilesPbar.setValue(0)
+        self.edit_page.editFilesPbar.setFormat("%p%")
 
     def on_export_source_requested(self) -> None:
 
