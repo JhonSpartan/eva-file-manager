@@ -63,6 +63,7 @@ class FileService:
         renamed = False
         need_rename = False
         new_file = file
+        corrections = []
 
         if not file.is_file():
             return self._file_result(file, new_file, False)
@@ -90,23 +91,20 @@ class FileService:
 
         if len(split_name) <= 2 or split_name[2] != file_id:
             split_name[2:3] = [file_id]
-            result.errors.append(f"Некорректный ID в файле {file}")
+            corrections.append(f"Некорректный ID в файле {file}")
             need_rename = True
 
         if len(split_name) <= 1 or split_name[1] != file_art:
             split_name[1:2] = [file_art]
-            result.errors.append(f"Некорректный ART в файле {file}")
+            corrections.append(f"Некорректный ART в файле {file}")
             need_rename = True
 
         if len(split_name) > 0 and split_name[0] != file_eva:
             split_name[0] = file_eva
-            result.errors.append(f"Некорректная EVA в файле {file}")
+            corrections.append(f"Некорректная EVA в файле {file}")
             need_rename = True
 
-        rename_inner_res = self.rename_inner(file, file_art, name, file_id, result)
-
-        if rename_inner_res:
-            result.renamed_layers += rename_inner_res
+        self.rename_inner(file, file_art, name, file_id, result)
 
         new_name = "_".join(split_name) + ext
         new_file = file.with_name(new_name)
@@ -117,9 +115,12 @@ class FileService:
 
                 renamed = True
                 result.renamed_files += 1
+                result.corrections.extend(corrections)
             except FileExistsError:
+                result.errors.extend(corrections)
                 result.errors.append(f"Целевой файл уже существует: {new_file}")
             except Exception as e:
+                result.errors.extend(corrections)
                 result.errors.append(f"Ошибка переименования файла {file}: {e}")
 
         return self._file_result(file, new_file, renamed)
@@ -187,18 +188,21 @@ class FileService:
             filename: str,
             file_id: str,
             result: RenameResult,
-    ) -> int:
+    ) -> None:
         try:
             doc = ezdxf.readfile(new_file_path)
             msp = doc.modelspace()
             layers = doc.layers
 
-        except (IOError, ezdxf.DXFStructureError):
-            return 0
+        except (IOError, ezdxf.DXFStructureError) as error:
+            result.errors.append(
+                f"Не удалось прочитать DXF: {new_file_path} — {error}"
+            )
+            return
 
         # Без main DXF не изменяем и не сохраняем.
         if "main" not in layers:
-            return 0
+            return
 
         layer_changes = 0
 
@@ -238,15 +242,19 @@ class FileService:
             self.remove_defpoints_layer(doc, "Defpoints")
 
         if units_normalized or layer_changes or defpoints_exists:
-            self.save_file(doc)
+            try:
+                self.save_file(doc)
+            except OSError as error:
+                result.errors.append(
+                    f"Не удалось сохранить DXF: {new_file_path} — {error}"
+                )
+                return
 
             if units_normalized:
                 result.normalized_units += 1
 
             if layer_changes:
                 result.renamed_layers += layer_changes
-
-        return 0
 
     def update_existing_text(self, existing_texts, msp, file_art, layer_name):
         layer_changes = 0

@@ -1,76 +1,74 @@
-import ezdxf
+import os
+from pathlib import Path
+
+from PySide6.QtCore import Qt, QUrl, QThread, QSettings, QTimer
+from PySide6.QtGui import QFont, QIcon, QDesktopServices, QFontMetrics
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QPushButton, QLabel,
     QVBoxLayout, QHBoxLayout,
     QStackedWidget, QMessageBox, QFileDialog, QListWidgetItem, QDialog
 )
-from PySide6.QtGui import QFont, QIcon, QDesktopServices, QFontMetrics
-from PySide6.QtCore import Qt, QUrl, QThread, QSettings, QTimer
-from pathlib import Path
+from shiboken6 import isValid
 
+from config.settings import DB_PATH, ensure_app_data, LOG_DIR
+from database.cloud_database import CloudDatabase
+from database.database import Database
+from database.repositories.cloud_sync_repository import CloudSyncRepository
+from database.repositories.copy_rule_repository import CopyRuleRepository
 from database.repositories.path_repository import PathRepository
 from database.repositories.stopper_repository import StopperRepository
 from database.repositories.template_repository import TemplateRepository
+from models.copy_models import ValidationIssueType
 from models.dxf_check_result import DxfCheckResult
+from models.eva_models import PreparedEva, PreviewTemplate
+from models.file_action_models import ReplaceMode
 from models.results import RenameFileResult
 from services.art_copy_planner import ArtCopyPlanner
 from services.art_copy_service import ArtCopyService
 from services.art_copy_validator import ArtCopyValidator
+from services.art_service import ArtService
+from services.copy_rules import CopyRuleService
+from services.delete_planner import DeletePlanner
+from services.eva_generation_planner import (EvaGenerationPlanner)
 from services.eva_service import EvaService
-from services.path_service import PathService
-from services.stopper_service import StopperService
-from services.template_service import TemplateService
 from services.export_planner import ExportPlanner
+from services.file_service import FileService
+from services.move_to_id_planner import MoveToIdPlanner
+from services.path_service import PathService
+from services.replace_planner import ReplacePlanner
+from services.stopper_detector import StopperDetector
+from services.stopper_editor import StopperEditor
+from services.stopper_service import StopperService
+from services.stopper_validator import StopperValidator
+from services.sync_service import SyncService
+from services.template_service import TemplateService
 from ui.dialogs.copy_rule_dialog import CopyRuleDialog
 from ui.dialogs.custom_template_dialog import CustomTemplateDialog
 from ui.dialogs.delete_dialog import DeleteDialog
-from ui.dialogs.path_dialog import PathDialog
-from ui.dialogs.stopper_selection_dialog import StopperSelectionDialog
-from ui.dialogs.template_dialog import TemplateDialog
-from ui.dialogs.stopper_dialog import StopperDialog
-from ui.dialogs.replace_dialog import ReplaceDialog
 from ui.dialogs.export_dialog import ExportDialog
 from ui.dialogs.move_to_id_dialog import MoveToIdDialog
+from ui.dialogs.path_dialog import PathDialog
+from ui.dialogs.replace_dialog import ReplaceDialog
 from ui.dialogs.stopper_actions_dialog import (StopperActionsDialog)
+from ui.dialogs.stopper_dialog import StopperDialog
+from ui.dialogs.stopper_selection_dialog import StopperSelectionDialog
+from ui.dialogs.template_dialog import TemplateDialog
+from ui.message_box import show_message
 from ui.pages.copy_art_page import CopyArtsPage
 from ui.pages.database_page import DatabasePage
-from ui.pages.eva_page import EvaPage
 from ui.pages.edit_files_page import EditFilesPage
-
-from services.file_service import FileService
-from services.art_service import ArtService
+from ui.pages.eva_page import EvaPage
 from utils.resource_path import resource_path
 from workers.art_copy_worker import ArtCopyWorker
-from workers.rename_worker import RenameWorker
-from workers.replace_worker import ReplaceWorker
+from workers.delete_worker import DeleteWorker
+from workers.dxf_check_worker import DxfCheckWorker
 from workers.eva_generation_worker import EvaGenerationWorker
 from workers.export_worker import ExportWorker
-from workers.delete_worker import DeleteWorker
 from workers.move_to_id_worker import MoveToIdWorker
+from workers.rename_worker import RenameWorker
+from workers.replace_worker import ReplaceWorker
 from workers.stopper_worker import StopperWorker
 from workers.sync_worker import SyncWorker
-
-from database.database import Database
-from database.cloud_database import CloudDatabase
-
-from database.repositories.cloud_sync_repository import CloudSyncRepository
-from services.sync_service import SyncService
-from database.repositories.copy_rule_repository import CopyRuleRepository
-from services.copy_rules import CopyRuleService
-from models.eva_models import PreparedEva, PreviewTemplate
-from models.file_action_models import ReplaceMode
-from models.copy_models import ValidationIssueType
-from services.eva_generation_planner import (EvaGenerationPlanner)
-from services.replace_planner import ReplacePlanner
-from services.delete_planner import DeletePlanner
-from services.move_to_id_planner import MoveToIdPlanner
-from services.stopper_detector import StopperDetector
-from services.stopper_editor import StopperEditor
-from services.stopper_validator import StopperValidator
-
-from ui.message_box import show_message
-
-from config.settings import DB_PATH, ensure_app_data
 
 
 class Ui_MainWindow:
@@ -191,6 +189,20 @@ class MainWindow(QMainWindow):
         self.ui.btn_eva.setChecked(True)
 
         self.five_d_mode = False
+
+        self.rename_for_dxf_check = False
+
+        self.dxf_preparation_result = None
+
+        self.dxf_check_results = None
+
+        self.dxf_thread = None
+
+        self.dxf_worker = None
+
+        self.thread = None
+
+        self.rename_worker = None
 
         self.prepared_evas: list[PreparedEva] = []
 
@@ -524,6 +536,7 @@ class MainWindow(QMainWindow):
         self.sync_thread = None
         self.sync_worker = None
 
+
     def on_load_files_requested(self):
         start_dir = self.last_directory
 
@@ -737,10 +750,15 @@ class MainWindow(QMainWindow):
             not processing
         )
 
-    def start_rename(self):
+    def start_rename(self, for_dxf_check: bool = False):
+        self.rename_for_dxf_check = for_dxf_check
+
         self.set_processing_state(True)
         self.thread = QThread()
-        self.rename_worker = RenameWorker(self.files_to_rename, self.file_service)
+        self.rename_worker = RenameWorker(
+            self.files_to_rename,
+            self.file_service,
+        )
 
         self.rename_worker.moveToThread(self.thread)
 
@@ -752,8 +770,13 @@ class MainWindow(QMainWindow):
         self.rename_worker.finished.connect(self.thread.quit)
         self.rename_worker.finished.connect(self.rename_worker.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
+        self.thread.finished.connect(self._on_rename_thread_finished)
 
         self.thread.start()
+
+    def _on_rename_thread_finished(self):
+        self.thread = None
+        self.rename_worker = None
 
     def move_renamed_file(self, file_result: RenameFileResult):
         left_list = self.edit_page.files_to_rename_list
@@ -769,24 +792,25 @@ class MainWindow(QMainWindow):
                 break
 
     def on_rename_progress(self, current, total, file_result):
-        self.edit_page.editFilesPbar.setMaximum(total)
-        self.edit_page.editFilesPbar.setValue(current)
+        pbar = self.edit_page.editFilesPbar
+        pbar.setMaximum(total)
+        pbar.setValue(current)
+        pbar.setFormat(f"Коррекция имен и единиц измерения: {current} из {total} — %p%")
 
         self.move_renamed_file(file_result)
 
-    def on_rename_failed(
-            self,
-            error: str,
-    ) -> None:
-        show_message(
-    self,
-    QMessageBox.Icon.Critical,
-            "Ошибка переименования",
-            error,
-        )
+    def on_rename_failed(self, error):
+        self.rename_for_dxf_check = False
+        self.dxf_preparation_result = None
 
         self.files_to_rename.clear()
         self.set_processing_state(False)
+
+        QMessageBox.critical(
+            self,
+            "Ошибка переименования",
+            error,
+        )
 
     def on_rename_finished(self, result):
         summary = []
@@ -806,15 +830,40 @@ class MainWindow(QMainWindow):
                 f"Исправлена система единиц: {result.normalized_units}."
             )
 
-        show_message(
-    self,
-    QMessageBox.Icon.Information,
-            "Готово",
-            "\n".join(summary) or "Изменений не внесено.",
+        if result.errors and not self.rename_for_dxf_check:
+            summary.append(f"Ошибок и замечаний: {len(result.errors)}.")
+
+
+        if self.rename_for_dxf_check:
+            self.dxf_preparation_result = result
+
+            self.files_to_rename.clear()
+            self.return_processed_files()
+
+            self.rename_for_dxf_check = False
+            self.set_processing_state(False)
+
+            self.start_dxf_worker()
+            return
+
+        dialog = QMessageBox(self)
+        dialog.setWindowTitle("Готово")
+        dialog.setIcon(QMessageBox.Icon.Information)
+
+        dialog.setText(
+            "\n".join(summary) or "Изменений не внесено."
         )
+
+        if result.errors:
+            dialog.setDetailedText("\n".join(result.errors))
+            self.localize_details_button(dialog)
+
+        dialog.setStandardButtons(QMessageBox.StandardButton.Ok)
 
         self.files_to_rename.clear()
         self.set_processing_state(False)
+
+        dialog.exec()
 
     def filter_files(self, find_text: str):
         left_list = self.edit_page.files_to_rename_list
@@ -3949,19 +3998,18 @@ class MainWindow(QMainWindow):
     def on_check_dxf(self):
         filter_text = self.edit_page.find_input.text().strip()
 
-        for stopper in self.stopper_repository.get_all():
-            print(stopper.stopper_name, stopper.is_cuttable)
-
         if filter_text:
             reply = QMessageBox.warning(
                 self,
                 "Активен фильтр файлов",
                 (
                     f"Сейчас установлен фильтр: «{filter_text}».\n\n"
-                    "Проверка DXF будет выполнена только для "
-                    "видимых файлов рабочего списка.\n\n"
-                    "Проверка пустых ID-папок будет выполнена "
-                    "для всех определённых EVA независимо от фильтра.\n\n"
+                    "Проверка стопперов и слоя main будет выполнена "
+                    "только для видимых файлов.\n\n"
+                    "Геометрия будет проверена для всех файлов ID1/ID2 "
+                    "в ART, выбранных по видимым файлам ID1/ID2.\n\n"
+                    "Пустые ID-папки будут проверены во всех определённых EVA "
+                    "независимо от фильтра.\n\n"
                     "Продолжить?"
                 ),
                 QMessageBox.StandardButton.Yes
@@ -3972,100 +4020,22 @@ class MainWindow(QMainWindow):
             if reply != QMessageBox.StandardButton.Yes:
                 return
 
-        visible_files, all_files = self._get_files_for_dxf_check()
+        visible_files, _ = self._get_files_for_dxf_check()
 
-        standard_diameters = [
-            item.diameter
-            for item in self.stopper_repository.get_all()
-        ]
-
-        stopper_result = DxfCheckResult()
-
-        for file_path in visible_files:
-            stopper = self._get_file_stopper(file_path)
-
-            if stopper is None:
-                continue
-
-            file_result = self.file_service.check_file_stoppers(
-                file_path=file_path,
-                expected_diameter=stopper.diameter,
-                standard_diameters=standard_diameters,
+        if not visible_files:
+            QMessageBox.information(
+                self,
+                "Проверка DXF",
+                "Нет файлов для проверки.",
             )
+            return
 
-            stopper_result.checked_files += file_result.checked_files
-            stopper_result.issues.extend(file_result.issues)
+        self.dxf_preparation_result = None
 
-        print("\n=== ПРОВЕРКА СТОПЕРОВ ===")
-        print(f"Проверено файлов: {stopper_result.checked_files}")
-        print(f"Проблем: {stopper_result.problem_count}")
+        self.dxf_check_results = None
 
-        for issue in stopper_result.issues:
-            print(f"\n{issue.message}")
-
-            for path in issue.paths:
-                print(f"  {path}")
-
-        geometry_result = self._check_all_art_geometry(all_files)
-
-        print("Проблем геометрии:", geometry_result.problem_count)
-
-        for issue in geometry_result.issues:
-            print(issue.category, issue.message)
-            for path in issue.paths:
-                print("  ", path)
-
-        eva_directories = self._get_eva_directories(all_files)
-        empty_id_directories = self._find_empty_id_directories(eva_directories)
-
-        missing_main = []
-        read_errors = []
-
-        for file in visible_files:
-            error = self.file_service.check_dxf_main(file)
-
-            if error:
-                if error.startswith("Не удалось прочитать DXF"):
-                    read_errors.append(error)
-                else:
-                    missing_main.append(error)
-
-        report = [
-            f"Проверено DXF: {len(visible_files)}",
-            f"Без слоя main: {len(missing_main)}",
-            f"Ошибок чтения: {len(read_errors)}",
-            f"Пустых ID-папок: {len(empty_id_directories)}",
-        ]
-
-        if missing_main:
-            report.extend(["", "DXF без main:", *missing_main])
-
-        if read_errors:
-            report.extend(["", "Ошибки чтения:", *read_errors])
-
-        if empty_id_directories:
-            report.extend([
-                "",
-                "Пустые ID-папки:",
-                *(str(path) for path in empty_id_directories),
-            ])
-
-        art_dir = Path("D:/basa/nieobrob/EVA7536/art-10262")
-
-        result = self.file_service.check_art_geometry(art_dir)
-
-        print("Найдено проблем:", result.problem_count)
-
-        for issue in result.issues:
-            print(issue.category, issue.message)
-            for path in issue.paths:
-                print("  ", path)
-
-        QMessageBox.information(
-            self,
-            "Тест финальной проверки DXF",
-            "\n".join(report),
-        )
+        self.files_to_rename = visible_files.copy()
+        self.start_rename(for_dxf_check=True)
 
     def _get_files_for_dxf_check(self) -> tuple[list[Path], list[Path]]:
         left_list = self.edit_page.files_to_rename_list
@@ -4095,49 +4065,301 @@ class MainWindow(QMainWindow):
 
         return sorted(eva_directories)
 
-    def _find_empty_id_directories(
-            self,
-            eva_directories: list[Path],
-    ) -> list[Path]:
-        empty_id_directories = []
-
-        for eva_dir in eva_directories:
-            for art_dir in eva_dir.iterdir():
-                if not art_dir.is_dir():
-                    continue
-
-                for id_dir in art_dir.iterdir():
-                    if not id_dir.is_dir():
-                        continue
-
-                    if not id_dir.name.isdigit():
-                        continue
-
-                    if not any(id_dir.iterdir()):
-                        empty_id_directories.append(id_dir)
-
-        return sorted(empty_id_directories)
-
-    def _check_all_art_geometry(
-            self,
-            files: list[Path],
-    ) -> DxfCheckResult:
-        result = DxfCheckResult()
-
-        art_directories = sorted({
+    def _get_art_directories(self, files: list[Path]) -> list[Path]:
+        return sorted({
             file.parent.parent
             for file in files
             if file.suffix.lower() == ".dxf"
         })
 
-        for art_dir in art_directories:
-            art_result = self.file_service.check_art_geometry(art_dir)
-            result.issues.extend(art_result.issues)
+    def start_dxf_worker(self):
+        visible_files, all_files = self._get_files_for_dxf_check()
+        eva_directories = self._get_eva_directories(all_files)
+        if self.edit_page.find_input.text().strip():
+            geometry_files = [
+                file for file in visible_files
+                if file.parent.name in ("1", "2")
+            ]
+        else:
+            geometry_files = all_files
 
-        return result
+        art_directories = self._get_art_directories(geometry_files)
 
-    def _get_file_stopper(self, file_path: Path):
-        stopper_name = file_path.stem.lower().rsplit("_", 1)[-1]
+        if not visible_files:
+            return
 
-        return self.stopper_repository.get_by_name(stopper_name)
+        self.set_processing_state(True)
 
+        stoppers = self.stopper_repository.get_all()
+
+        stopper_data = {
+            stopper.stopper_name.lower(): stopper.diameter
+            for stopper in stoppers
+            if stopper.is_cuttable
+        }
+
+        standard_diameters = [
+            stopper.diameter
+            for stopper in stoppers
+        ]
+
+        self.dxf_thread = QThread()
+        self.dxf_worker = DxfCheckWorker(
+            visible_files,
+            self.file_service,
+            stopper_data,
+            standard_diameters,
+            art_directories,
+            eva_directories,
+        )
+
+        self.dxf_worker.moveToThread(self.dxf_thread)
+
+        self.dxf_thread.started.connect(self.dxf_worker.run)
+
+        self.dxf_worker.progress.connect(self.on_dxf_check_progress)
+        self.dxf_worker.status.connect(self.on_dxf_check_status)
+        self.dxf_worker.finished.connect(self.on_dxf_check_finished)
+        self.dxf_worker.failed.connect(self.on_dxf_check_failed)
+
+        self.dxf_worker.finished.connect(self.dxf_thread.quit)
+        self.dxf_worker.failed.connect(self.dxf_thread.quit)
+
+        self.dxf_worker.finished.connect(self.dxf_worker.deleteLater)
+        self.dxf_worker.failed.connect(self.dxf_worker.deleteLater)
+
+        self.dxf_thread.finished.connect(self.dxf_thread.deleteLater)
+
+        self.dxf_thread.finished.connect(self._on_dxf_thread_finished)
+
+        self.dxf_thread.start()
+
+    def _on_dxf_thread_finished(self):
+        self.dxf_thread = None
+        self.dxf_worker = None
+
+    def on_dxf_check_progress(self, current: int, total: int):
+        pbar = self.edit_page.editFilesPbar
+        pbar.setMaximum(total)
+        pbar.setValue(current)
+
+    def on_dxf_check_status(self, status: str):
+        self.edit_page.editFilesPbar.setFormat(status + " — %p%")
+
+    def on_dxf_check_finished(
+        self,
+        missing_main: list,
+        read_errors: list,
+        stopper_result: DxfCheckResult,
+        geometry_result: DxfCheckResult,
+        empty_id_directories: list[Path],
+    ):
+        self.set_processing_state(False)
+
+        self.dxf_check_results = {
+            "missing_main": missing_main,
+            "read_errors": read_errors,
+            "stopper_result": stopper_result,
+            "geometry_result": geometry_result,
+            "empty_id_directories": empty_id_directories,
+        }
+
+        self.edit_page.editFilesPbar.setFormat("%p%")
+
+        log_path = self.save_dxf_check_report()
+
+        preparation = self.dxf_preparation_result
+
+        total_problems = self._count_dxf_problems()
+
+        dialog = QMessageBox(self)
+        dialog.setWindowTitle("Проверка DXF завершена")
+        dialog.setIcon(QMessageBox.Icon.Information)
+
+        dialog.setText(
+            f"Всего проблем: {total_problems}\n\n"
+            "КОРРЕКЦИЯ ИМЕН И ЕДИНИЦ ИЗМЕРЕНИЯ\n"
+            f"Переименовано файлов: {preparation.renamed_files}\n"
+            f'Обновлено слоёв "nadpis": {preparation.renamed_layers}\n'
+            f"Исправлена система единиц: {preparation.normalized_units}\n"
+            f"Автоматически исправлено: {len(preparation.corrections)}\n"
+            f"Ошибок коррекции: {len(preparation.errors)}\n"
+            "\n"
+            "ПРОВЕРКА DXF\n"
+            f"Без слоя main: {len(missing_main)}\n"
+            f"Ошибок чтения: {len(read_errors)}\n"
+            f"Проблем со стопперами: {stopper_result.problem_count}\n"
+            f"Проблем геометрии: {geometry_result.problem_count}\n"
+            f"Пустых ID-папок: {len(empty_id_directories)}"
+        )
+
+        open_log_btn = None
+
+        if log_path is not None:
+            open_log_btn = dialog.addButton(
+                "Открыть лог",
+                QMessageBox.ButtonRole.ActionRole,
+            )
+
+        dialog.addButton(QMessageBox.StandardButton.Ok)
+        dialog.exec()
+
+        if open_log_btn is not None and dialog.clickedButton() == open_log_btn:
+            try:
+                os.startfile(str(log_path))
+            except OSError as error:
+                QMessageBox.warning(
+                    self,
+                    "Ошибка открытия лога",
+                    f"Не удалось открыть файл:\n{log_path}\n\n{error}",
+                )
+
+    def on_dxf_check_failed(self, error: str):
+        self.dxf_check_results = None
+
+        self.set_processing_state(False)
+        self.edit_page.editFilesPbar.setFormat("%p%")
+
+        QMessageBox.critical(
+            self,
+            "Ошибка проверки DXF",
+            error,
+        )
+
+    def _count_dxf_problems(self) -> int:
+        preparation = self.dxf_preparation_result
+        checks = self.dxf_check_results
+
+        if preparation is None or checks is None:
+            return 0
+
+        return (
+                len(preparation.errors)
+                + len(checks["missing_main"])
+                + len(checks["read_errors"])
+                + checks["stopper_result"].problem_count
+                + checks["geometry_result"].problem_count
+                + len(checks["empty_id_directories"])
+        )
+
+    def build_dxf_check_report(self) -> str:
+        preparation = self.dxf_preparation_result
+        checks = self.dxf_check_results
+
+        if preparation is None or checks is None:
+            return "Нет результатов проверки DXF."
+
+        total_problems = self._count_dxf_problems()
+
+        lines = [
+            "=== ФИНАЛЬНАЯ ПРОВЕРКА DXF ===",
+            f"Всего проблем: {total_problems}",
+            "",
+            "=== КОРРЕКЦИЯ ИМЕН И ЕДИНИЦ ИЗМЕРЕНИЯ ===",
+            f"Переименовано файлов: {preparation.renamed_files}",
+            f'Обновлено слоёв "nadpis": {preparation.renamed_layers}',
+            f"Исправлена система единиц: {preparation.normalized_units}",
+            f"Автоматически исправлено: {len(preparation.corrections)}",
+            f"Ошибок и замечаний: {len(preparation.errors)}",
+        ]
+
+        if preparation.corrections:
+            lines.extend(["", "Автоматически исправлено:"])
+            lines.extend(preparation.corrections)
+
+        if preparation.errors:
+            lines.extend(["", "Ошибки и неисправленные замечания:"])
+            lines.extend(preparation.errors)
+
+        stopper_result = checks["stopper_result"]
+        geometry_result = checks["geometry_result"]
+
+        lines.extend([
+            "",
+            "=== ПРОВЕРКА СТОППЕРОВ ===",
+            f"Проверено файлов: {stopper_result.checked_files}",
+            f"Проблем: {stopper_result.problem_count}",
+        ])
+
+        for issue in stopper_result.issues:
+            lines.append("")
+            lines.append(issue.message)
+            lines.extend(str(path) for path in issue.paths)
+
+        lines.extend([
+            "",
+            "=== ПРОВЕРКА ГЕОМЕТРИИ ===",
+            f"Проблем: {geometry_result.problem_count}",
+        ])
+
+        for issue in geometry_result.issues:
+            lines.append("")
+            lines.append(f"[{issue.category}] {issue.message}")
+            lines.extend(str(path) for path in issue.paths)
+
+        missing_main = checks["missing_main"]
+        read_errors = checks["read_errors"]
+        empty_id_directories = checks["empty_id_directories"]
+
+        lines.extend([
+            "",
+            "=== ПРОВЕРКА СЛОЯ MAIN ===",
+            f"Без слоя main: {len(missing_main)}",
+            *missing_main,
+            "",
+            "=== ОШИБКИ ЧТЕНИЯ DXF ===",
+            f"Ошибок: {len(read_errors)}",
+            *read_errors,
+            "",
+            "=== ПУСТЫЕ ID-ПАПКИ ===",
+            f"Пустых папок: {len(empty_id_directories)}",
+            *(str(path) for path in empty_id_directories),
+        ])
+
+        return "\n".join(lines)
+
+    def save_dxf_check_report(self) -> Path | None:
+        log_path = LOG_DIR / "logs.txt"
+
+        try:
+            LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+            log_path.write_text(
+                self.build_dxf_check_report() + "\n",
+                encoding="utf-8",
+            )
+        except OSError as error:
+            QMessageBox.warning(
+                self,
+                "Ошибка сохранения лога",
+                f"Не удалось сохранить отчёт:\n{log_path}\n\n{error}",
+            )
+            return None
+
+        return log_path
+
+    def closeEvent(self, event):
+        rename_running = (
+                self.thread is not None
+                and isValid(self.thread)
+                and self.thread.isRunning()
+        )
+
+        dxf_running = (
+                self.dxf_thread is not None
+                and isValid(self.dxf_thread)
+                and self.dxf_thread.isRunning()
+        )
+
+        if rename_running or dxf_running:
+            QMessageBox.warning(
+                self,
+                "Операция выполняется",
+                "Сейчас выполняется обработка файлов.\n\n"
+                "Дождитесь завершения операции, "
+                "прежде чем закрывать приложение.",
+            )
+            event.ignore()
+            return
+
+        super().closeEvent(event)
