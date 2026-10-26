@@ -54,10 +54,16 @@ class TemplateService:
         }
 
         for template in templates:
-            if template.origin != TemplateOrigin.DATABASE:
+            if template.origin not in (
+                    TemplateOrigin.DATABASE,
+                    TemplateOrigin.CUSTOM,
+            ):
                 continue
 
             if not template.has_stoppers:
+                continue
+
+            if template.stopper_combination is not None:
                 continue
 
             for combination in combinations:
@@ -86,7 +92,11 @@ class TemplateService:
                         SessionTemplate(
                             folder_id=folder_id,
                             template_name=new_name,
-                            origin=TemplateOrigin.STOPPER,
+                            origin=(
+                                TemplateOrigin.CUSTOM
+                                if template.origin == TemplateOrigin.CUSTOM
+                                else TemplateOrigin.STOPPER
+                            ),
                             selected=False,
                             stopper_combination=combination,
                         )
@@ -178,6 +188,7 @@ class TemplateService:
                         folder_id=folder_id,
                         template_name=template.template_name,
                         origin=TemplateOrigin.CUSTOM,
+                        has_stoppers=template.has_stoppers,
                         selected=True,
                         stopper_combination=(
                             template.stopper_combination

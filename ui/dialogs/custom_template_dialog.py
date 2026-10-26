@@ -106,6 +106,7 @@ class CustomTemplateDialog(BaseDialog):
             folder_id=source_template.folder_id,
             template_name=new_name,
             origin=TemplateOrigin.CUSTOM,
+            has_stoppers=source_template.has_stoppers,
             selected=True,
             stopper_combination=(
                 source_template.stopper_combination
