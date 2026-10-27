@@ -1,9 +1,12 @@
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QWidget, QLabel, QPushButton, QLineEdit,
     QProgressBar, QVBoxLayout, QHBoxLayout, QGridLayout,
     QGroupBox, QCheckBox
 )
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QSize
+
+from utils.resource_path import resource_path
 from widgets.arts_tree import ArtsTree, ArtsTreeMode
 
 class TriStateControlCheckBox(QCheckBox):
@@ -207,6 +210,17 @@ class CopyArtsPage(QWidget):
         # === Buttons (row 3) ==============================
         # ==================================================
         self.copyAndRenameButton = QPushButton("Копировать и переименовать")
+
+        self.copyAndRenameButton.setIcon(
+            QIcon(
+                str(resource_path("icons", "files.svg"))
+            )
+        )
+
+        self.copyAndRenameButton.setIconSize(
+            QSize(16, 16)
+        )
+
         self.fiveDModeCheckbox = QCheckBox("Режим 5D")
 
         bottom_layout = QHBoxLayout()

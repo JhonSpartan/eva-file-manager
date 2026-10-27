@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QGridLayout, QGroupBox,
     QLabel, QLineEdit, QPushButton, QHBoxLayout, QTreeWidget, QCheckBox, QTreeWidgetItem, QMessageBox
 )
-from PySide6.QtCore import Signal, Qt
+from PySide6.QtCore import Signal, Qt, QSize
 from PySide6.QtWidgets import QScrollArea, QProgressBar
 from models.eva_models import (SessionTemplate, TemplateOrigin, PreviewTemplate, PreparedEva)
 from utils.resource_path import resource_path
@@ -95,6 +95,16 @@ class EvaPage(QWidget):
         self.create_structure_btn = QPushButton(
             "Создать структуру"
         )
+        self.create_structure_btn.setIcon(
+            QIcon(
+                str(resource_path("icons", "folder-plus.svg"))
+            )
+        )
+
+        self.create_structure_btn.setIconSize(
+            QSize(16, 16)
+        )
+
         self.create_structure_btn.setMinimumHeight(40)
 
         self.open_last_output_btn = QPushButton(

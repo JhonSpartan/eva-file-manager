@@ -84,7 +84,7 @@ class EditFilesPage(QWidget):
         )
         self.clear_processed_btn.clicked.connect(
             self.on_clear_processed_clicked
-        )От
+        )
         self.files_to_rename_list.pathsDropped.connect(
             self.filesDropped.emit
         )
@@ -264,7 +264,7 @@ class EditFilesPage(QWidget):
                 )
             )
         )
-        self.check_dxf_btn.setIconSize(QSize(24, 24))
+        self.check_dxf_btn.setIconSize(QSize(22, 22))
 
         bottom_buttons_layout = QHBoxLayout()
 

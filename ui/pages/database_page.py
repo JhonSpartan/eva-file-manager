@@ -1,14 +1,16 @@
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QTabWidget, QLabel, QLineEdit, QPushButton, QGroupBox, QGridLayout, QHBoxLayout,
 )
 
+from utils.resource_path import resource_path
 from widgets.database_table import (
     DatabaseTableWidget,
 )
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Signal, QSize
 
 from pathlib import Path
 
@@ -39,6 +41,16 @@ class DatabasePage(QWidget):
 
         self.sync_btn = QPushButton(
             "Синхронизировать"
+        )
+
+        self.sync_btn.setIcon(
+            QIcon(
+                str(resource_path("icons", "refresh-cw.svg"))
+            )
+        )
+
+        self.sync_btn.setIconSize(
+            QSize(16, 16)
         )
 
         sync_layout = QHBoxLayout()
