@@ -73,7 +73,7 @@ from workers.sync_worker import SyncWorker
 
 class Ui_MainWindow:
     def setup_ui(self, MainWindow):
-        MainWindow.setWindowTitle("FileForge v1.1.1")
+        MainWindow.setWindowTitle("FileForge v1.4.0.")
         MainWindow.resize(950, 700)
 
         # === Центральный виджет ===
