@@ -81,7 +81,7 @@ class PathDialog(BaseDialog):
             "Использовать путь по умолчанию"
         )
         self.use_default_checkbox.setChecked(
-            use_default
+            use_default and bool(self.path_input.text().strip())
         )
         self.use_default_checkbox.setVisible(
             self.show_use_default_option

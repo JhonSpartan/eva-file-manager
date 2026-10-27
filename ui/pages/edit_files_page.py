@@ -83,11 +83,16 @@ class EditFilesPage(QWidget):
             self.openExportFolderRequested.emit
         )
         self.clear_processed_btn.clicked.connect(
-            self.renamed_files_list.clear
-        )
+            self.on_clear_processed_clicked
+        )От
         self.files_to_rename_list.pathsDropped.connect(
             self.filesDropped.emit
         )
+
+    def on_clear_processed_clicked(self):
+        self.renamed_files_list.clear()
+        self.editFilesPbar.setValue(0)
+        self.editFilesPbar.setFormat("%p%")
 
     def setup_ui(self):
         main_layout = QGridLayout(self)

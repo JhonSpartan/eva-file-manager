@@ -1445,6 +1445,7 @@ class MainWindow(QMainWindow):
         self.files_to_rename.clear()
         self.files_for_replace.clear()
         self.edit_page.editFilesPbar.setValue(0)
+        self.edit_page.editFilesPbar.setFormat("%p%")
 
     def start_copy_art(self):
         five_d_mode = self.copy_page.fiveDModeCheckbox.isChecked()
@@ -2529,25 +2530,17 @@ class MainWindow(QMainWindow):
 
     def on_create_structure_requested(self):
 
-        use_default_path = self.eva_use_default_output
+        default_path = self.path_service.get_eva_default_output_path()
+
+        use_default_path = (
+                self.eva_use_default_output
+                and default_path is not None
+        )
 
         if use_default_path:
-            destination_root = (
-                self.path_service
-                .get_eva_default_output_path()
-            )
-
-            if destination_root is None:
-                show_message(
-                    QMessageBox.Icon.Warning,
-                    "Путь не задан",
-                    "Путь по умолчанию не настроен.",
-                )
-                return
-
+            destination_root = default_path
 
         else:
-
             selected_path = (
 
                 QFileDialog.getExistingDirectory(
@@ -2693,11 +2686,16 @@ class MainWindow(QMainWindow):
             return
 
         selected_path = dialog.get_path()
-
-        if selected_path is None:
-            return
-
         use_default = dialog.use_default_path()
+
+        if selected_path is None and use_default:
+            QMessageBox.warning(
+                self,
+                "Путь не выбран",
+                "Сначала выберите папку или снимите галочку "
+                "«Использовать путь по умолчанию».",
+            )
+            return
 
         self.eva_use_default_output = use_default
 
@@ -2706,9 +2704,10 @@ class MainWindow(QMainWindow):
             use_default,
         )
 
-        self.path_service.set_eva_default_output_path(
-            selected_path
-        )
+        if selected_path is not None:
+            self.path_service.set_eva_default_output_path(
+                selected_path
+            )
 
         self.refresh_eva_paths()
 
@@ -2910,10 +2909,15 @@ class MainWindow(QMainWindow):
             .get_files_default_output_path()
         )
 
+        use_default_path = (
+                self.files_use_default_output
+                and default_path is not None
+        )
+
         dialog = ExportDialog(
             default_path=default_path,
             last_directory=self.files_last_directory,
-            use_default=self.files_use_default_output,
+            use_default=use_default_path,
             parent=self,
         )
 
@@ -2934,7 +2938,7 @@ class MainWindow(QMainWindow):
             )
             return
 
-        if not self.files_use_default_output:
+        if not use_default_path:
             self.files_last_directory = str(
                 destination_path
             )
@@ -3123,11 +3127,16 @@ class MainWindow(QMainWindow):
             return
 
         path = dialog.get_path()
-
-        if path is None:
-            return
-
         use_default = dialog.use_default_path()
+
+        if path is None and use_default:
+            QMessageBox.warning(
+                self,
+                "Путь не выбран",
+                "Сначала выберите папку или снимите галочку "
+                "«Использовать путь по умолчанию».",
+            )
+            return
 
         self.files_use_default_output = use_default
 
@@ -3136,9 +3145,8 @@ class MainWindow(QMainWindow):
             use_default,
         )
 
-        self.path_service.set_files_default_output_path(
-            path
-        )
+        if path is not None:
+            self.path_service.set_files_default_output_path(path)
 
         self.refresh_files_paths()
 
